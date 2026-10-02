@@ -49,10 +49,29 @@ DSH 写入 `.cs` -> Unity 导入并生成带 GUID 的 `.meta` -> `Assembly-CShar
 - The probe source is UTF-8 without BOM, matching the convention of `CoreFacade.cs` and `AudioManager.cs`.
 - 探针源码为 UTF-8 无 BOM, 与 `CoreFacade.cs`, `AudioManager.cs` 的既有约定一致.
 
-### Pending until you act / 待你操作后才算完成
+### Delivery approved / 交付已批准
 
-Nothing in this entry may be treated as an established fact until the two checklists below are ticked.
-在两份清单勾完之前, 本条目的任何内容都不得当作既成事实.
+The user approved this delivery and committed it. Every checklist item below was ticked by the user.
+用户批准了本次交付并已提交. 下列清单全部由用户勾选完成.
+
+### Closure record / 结账记录
+
+- Approved and committed as `f14b94c Probe-Test` (12 files changed, 599 insertions, 1 deletion).
+- 已批准并提交为 `f14b94c Probe-Test` (12 个文件变更, 599 行新增, 1 行删除).
+- Verified by DSH against the commit rather than against the checkbox state: all eleven files of this delivery, plus
+  `Assets/AGENTS.md` and `Assets/AGENTS.md.meta` from the previous delivery, are tracked at `f14b94c`, and the branch
+  matched `origin/Jill-DSH` with a clean working tree.
+- DSH 依据提交而非勾选状态核验: 本交付的十一个文件, 以及上一次交付的 `Assets/AGENTS.md` 与 `Assets/AGENTS.md.meta`,
+  在 `f14b94c` 中均已被跟踪; 分支与 `origin/Jill-DSH` 同步, 工作区干净.
+- The probe's `.cs` and its `.meta` were committed **as a pair**, so removing the probe cannot leave an orphan `.meta`.
+- 探针的 `.cs` 与其 `.meta` **成对提交**, 因此移除探针不会留下孤儿 `.meta`.
+- The two Inspector observations (Console free of compile errors; `Core.prefab` script references intact after the
+  folder migration) rest on the user's check marks and approval. DSH could not verify them mechanically: no
+  `Logs/Editor.log` was produced in this session, so the Console contents were never observable from here.
+- 两项 Inspector 观测 (Console 无编译错误; 目录迁移后 `Core.prefab` 脚本引用完好) 依据用户的勾选与批准.
+  DSH 无法机械验证: 本会话中始终没有生成 `Logs/Editor.log`, 因此 Console 内容在此处不可观测.
+- The probe is to be removed; see the note on its lifetime below.
+- 探针将被移除; 见下方关于其生命周期的说明.
 
 ### Inspector operations required / 需要你在 Inspector 里手动做的操作
 
@@ -94,9 +113,10 @@ GUID 无法重建, 丢失 `.meta` 会让引用它的场景与预制体变成 "un
 
 ### Note on the probe's lifetime / 关于探针生命周期的说明
 
-- [x] Delete `Assets/Scripts/Core/Diagnostics/` (the whole folder, including its `.meta`) once the chain has been
-  
-      observed end to end. The probe carries no production value; Unity will remove the orphaned `.meta`.
-- [x] 链路端到端观测通过后, 删除 `Assets/Scripts/Core/Diagnostics/` (整个目录, 含其 `.meta`).
-  
-      探针没有生产价值; 孤儿 `.meta` 由 Unity 移除.
+- [x] Delete `Assets/Scripts/Core/Diagnostics/` (the whole folder) now that the chain has been observed end to end.
+      The probe carries no production value.
+- [x] 链路端到端观测通过后, 删除 `Assets/Scripts/Core/Diagnostics/` (整个目录). 探针没有生产价值.
+- Because the `.cs` and its `.meta` were committed as a pair, deleting the folder makes git record both as deletions,
+  in one commit, with no orphan `.meta` left behind for Unity to clean up.
+- 由于 `.cs` 与其 `.meta` 成对提交, 删除目录会让 git 在同一个提交里把两者都记为删除,
+  不会留下孤儿 `.meta` 等待 Unity 清理.
