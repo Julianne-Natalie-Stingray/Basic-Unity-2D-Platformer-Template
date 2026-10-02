@@ -18,7 +18,7 @@ public class AudioManagerConfigs : ScriptableObject
     [SerializeField, BoxGroup("Emitter Pooling")] 
     private int defaultCapacity = 10;
     [SerializeField, BoxGroup("Emitter Pooling")] 
-    private int maxPoolSize = 10;
+    private int maxPoolSize = 30;
     [SerializeField, BoxGroup("Emitter Pooling")]
     private int prewarmAmount = 10;
     [SerializeField, BoxGroup("Emitter Pooling")] 
@@ -32,6 +32,7 @@ public class AudioManagerConfigs : ScriptableObject
     public int DefaultCapacity => defaultCapacity;
     public int MaxPoolSize => maxPoolSize;
     public int PrewarmAmount => prewarmAmount;
+    public int MaxSoundInstance => maxSoundInstance;
 
 #endregion
 

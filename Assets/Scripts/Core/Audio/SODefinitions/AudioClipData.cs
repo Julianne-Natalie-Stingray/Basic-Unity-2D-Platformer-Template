@@ -14,6 +14,8 @@ public class AudioClipData : ScriptableObject
     public AudioMixerGroup MixerGroup => mixerGroup;
     public bool Loop => loop;
     public int MaxInstances => maxInstances;
+    public float Volume => volume;
+    public float Pitch => pitch;
 #endregion
     
     [SerializeField] private AudioId audioId;
@@ -21,6 +23,13 @@ public class AudioClipData : ScriptableObject
     [SerializeField] private AudioMixerGroup mixerGroup;
     [SerializeField] private bool loop = false;
     [SerializeField] private int maxInstances = 10;
+
+    [SerializeField, Range(0f, 1f)]
+    [Tooltip("Baseline volume for every playback of this clip. The builder may raise or lower it live.")]
+    private float volume = 1f;
+    [SerializeField, Range(0.1f, 3f)]
+    [Tooltip("Baseline pitch for every playback of this clip. The builder may raise or lower it live.")]
+    private float pitch = 1f;
     
 #if UNITY_EDITOR
     private void OnValidate()

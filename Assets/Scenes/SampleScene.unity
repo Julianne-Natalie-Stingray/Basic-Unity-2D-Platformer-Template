@@ -228,7 +228,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3026865862681003294, guid: 4ff6640bd03a8c24db05923fcc057dca, type: 3}
       propertyPath: requestTime
-      value: 5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3026865862681003294, guid: 4ff6640bd03a8c24db05923fcc057dca, type: 3}
       propertyPath: debugAudioRequest

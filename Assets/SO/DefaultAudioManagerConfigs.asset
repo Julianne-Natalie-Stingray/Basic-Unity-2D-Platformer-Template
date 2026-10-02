@@ -17,6 +17,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f9b1025f320a5494a8154983ce646c10, type: 2}
   collectionCheck: 1
   defaultCapacity: 10
-  maxPoolSize: 10
+  maxPoolSize: 30
   prewarmAmount: 10
   maxSoundInstance: 30
