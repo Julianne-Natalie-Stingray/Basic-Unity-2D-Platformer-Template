@@ -1,5 +1,150 @@
 # CHANGELOG
 
+## 2026-10-03 — 交付: 音频的空间化 (SpatialBlend / MinDistance / MaxDistance + WithPosition)
+
+### 范围
+
+为音频补上空间化能力. 此前所有声音都是纯 2D, 且**位置对听感无影响**, 因此没有任何"从某处发声"的表达能力.
+
+### 新增
+
+- `AudioClipData` 新增 `SpatialBlend` / `MinDistance` / `MaxDistance` 三个字段(置于 `Spatial` 分组), 并暴露为只读 Property.
+  默认值为 `0f` / `1f` / `20f`.
+- `AudioEmitter.Configure()` 把三者写入 `AudioSource` 的 `spatialBlend` / `minDistance` / `maxDistance`.
+- `AudioEmitter.SetPosition(Vector3)`: 只写一次世界坐标, 不触碰跟随状态.
+- `AudioBuilder.WithPosition(Vector3)`: 链式入口; 用 `Vector3?` 承载, 使"未指定位置"与"位置为零"保持可区分.
+  终结符 `Play` 把它转交 `AudioManager.Play`, 后者写入 `AudioEmitter.SetPosition`.
+
+### 位置语义 (三种来源, 优先级明确)
+
+| 来源    | 入口                            | 说明                              |
+| ----- | ----------------------------- | ------------------------------- |
+| 跟随目标  | `WithFollowTarget(Transform)` | 每帧同步; 目标消失后沿用既有规则               |
+| 一次性坐标 | `WithPosition(Vector3)`       | 只写一次                            |
+| 都不给   | ——                            | emitter 停在池留下的位置, 即 `AudioRoot` |
+
+两者同时给出时**跟随胜出** —— 跟随每帧覆盖位置, 这是实现的自然结果, 已写入文档. 用户确认该取舍可接受:
+"如需要移动 SFX, 那么 FollowTarget + Spatial 效果即可."
+
+### 与既有 2D 行为的兼容性
+
+`SpatialBlend == 0` 时位置**完全无影响**, 因此现有三个资产的听感不发生任何变化 —— 本次是纯增量.
+反之 `SpatialBlend > 0` 时若既不跟随也不给坐标, 声音会始终从 `AudioRoot` 发出, 空间化形同无效; 二者必须一起使用.
+
+### 已知的不精确之处 (已与用户确认接受)
+
+场景中唯一的 `AudioListener` 挂在 `Main Camera` 上, 位于 `(0, 0, -10)`, 而 `AudioRoot` 在 `(0,0,0)`.
+因此相机的 z 偏移会参与距离计算(相机移动时音量会变), 且波幅不是精确的距离衰减.
+用户决定: **MainCamera 的 z 值不变**, "计算不需太精确, 目前先实现大致 spatial 效果".
+
+### 未改动
+
+- `AudioEmitter.prefab` 的 `AudioSource` 未改动(其 `Spatialize` 仍为 `0`; `spatialBlend` 是另一个开关, 二者都为 0 时行为一致).
+- 未写入任何 `.asset`; 三个资产上的新字段由 Unity 在下次保存时序列化为上述默认值.
+
+### 验证状态
+
+**编译已通过并核实.**
+
+- 首次编译**失败**, 报 `CS0246: BoxGroupAttribute / BoxGroup could not be found`:
+  本文件此前只 `using UnityEngine`, 而我用上了属于 `NaughtyAttributes` 的 `BoxGroup`
+  (该模式抄自 `AudioManagerConfigs.cs`, 那个文件有 `using NaughtyAttributes;`).
+  已补上该 using, 与 §5.2.3.1 对 NaughtyAttributes 的既有用法一致.
+  注: 同处使用的 `Min` 来自 `UnityEngine.MinAttribute`, 不需要额外 using; 只有 `BoxGroup` 需要.
+- 修正后产物已更新: `Assembly-CSharp.dll` @ `17:48:01`, 体积 `51712` -> `52736` 字节,
+  Unity 的 Bee/Tundra 构建后端在同刻运行.
+- 产物中已确认存在 `SetPosition` / `WithPosition` / `SpatialBlend` / `MinDistance` / `MaxDistance` / `spatialBlend`,
+  以及上一轮的 `willFollowTarget` / `ReleaseEmitter`.
+- `AudioClipData.cs` 已出现在 Unity 生成的 MonoScript 注册表中, 说明它进入了编译并注册成功.
+- 导入日志中无任何 `CS####` 诊断.
+
+### 文档
+
+- `Assets/Scripts/Core/README.md` 增补"音频的位置与空间化"一节, 并补充了 `willFollowTarget` 的语义、
+  以及"音量写入与位置同步互相独立"这一 `LateUpdate` 结构理由.
+- `Assets/PENDING_INSPECTOR.md` 加入 spatial 相关验收项 (编译项已勾除).
+
+---
+
+## 2026-10-03 — 修正: 无跟随目标的循环音被立刻归还 (已解决)
+
+本轮由**用户**定位并给出修法, DSH 负责复核、收紧并记账.
+
+### 症状
+
+`loop = true` 且未传 `WithFollowTarget` 的 `AudioClipData`, 播放后立即被归还.
+
+### 根因
+
+`LateUpdate` -> `SyncPosition()` -> `HandleLostTarget()` -> 循环音被 `Stop()`.
+
+`followTarget == null` 被当成了"目标已丢失", 但 `null` 同时表示"从未请求跟随". 两者被混为一谈,
+于是每个不跟随的声音每帧都被判定为"跟丢了", 循环音随之被立刻停止.
+
+### 用户的修法
+
+引入 `willFollowTarget` 作为"本次播放是否请求了跟随"的运行时标志(不序列化):
+
+- `SetFollowTarget()` 置 `true`;
+- `HandleLostTarget()` 置 `false`.
+
+设计意图(用户明确): 跟随是**每次请求**的特性, 目标一丢失就必须重新请求.
+`willFollowTarget` 与请求周期完全同步, **不允许** AudioEmitter 自己开着跟随状态等目标重新出现.
+
+### DSH 复核时发现并修正的两处问题
+
+**1. 守卫条件写反了.** 原提交为:
+
+```csharp
+if (!IsPlaying || willFollowTarget)   // 反了
+    return;
+```
+
+按此条件: 请求了跟随的声音(`willFollowTarget == true`)会立即返回, **永远不做位置同步** ——
+恰好把该标志要启用的行为抑制掉了; 而不跟随的声音仍然每帧走 `SyncPosition()` 并被判定为跟丢.
+同时 `isVolumeDirty` 的写入块位于其后, 两种情况下都无法执行,
+意味着 `SoundHandle.TrySetVolume` 的运行时改音量从未真正到达 `AudioSource`.
+
+已改为: 音量对**每种**播放都应用(句柄随时可能改音量), 位置同步**只在** `willFollowTarget` 为真时进行 ——
+两者互相独立, 因为"是否跟随"与"是否改音量"是无关的两件事.
+
+**2. `ResetEmitter()` 未清 `willFollowTarget`, 存在跨播放泄漏.** 修正守卫后这一点变成真缺陷:
+若某次跟随播放借出的 emitter 在目标仍存活时被归还, `willFollowTarget` 会停在 `true`,
+于是**下一次**播放(可能是不跟随的循环音)会去同步一个 `null` 目标 —— 正是本次修掉的那个 bug 经池复用复活.
+已在 `ResetEmitter()` 中补 `willFollowTarget = false`.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` 于 `16:16:16` 重建, 体积 `51712` 字节.
+- `willFollowTarget` 生命周期已逐行核对: 仅 `SetFollowTarget()`(255) 置真;
+  `ResetEmitter()`(276) 与 `HandleLostTarget()`(328) 置假 —— 与用户所述"与请求周期同步"一致.
+- 用户已实测循环 clip 行为符合预期.
+
+### 数据与资产改动 (由用户完成)
+
+- `AudioId` 枚举由 `Default` 拆为 `DefaultSfx` / `DefaultOst`, 并保留 `MouseClick`.
+  核对结果: 三个 `AudioClipData` 的 `audioId` 分别 `0 / 1 / 2`, 与枚举值**一一对应, 无冲突**.
+- `GenericAudioClipData.asset` 重命名为 `GenericSfx.asset`(GUID 保留, 故引用未断), 新增 `GenericOst.asset`.
+  `DefaultAudioManagerConfigs.audios` 的三条引用全部解析成功.
+- `Master.mixer` 新增 `SFX` / `OST` 分组; `Master.mixer` 亦被修改.
+- 导入一首 BGM(`上海アリス幻楽団 - 運命のダークサイド.mp3`)及 `Assets/Audios/Clips/DISCLAIMER.md`.
+
+### 设计决策记录 (用户决定, 非缺陷)
+
+- **有意不在 Audio 系统内区分 Ost 与 Sfx**, 也未为 Ost 添加"防止多首同时播放"的逻辑.
+  计划未来以类似 `OstScheme` 的机制管理, **明确超出本次开发范围**.
+  注: `GenericOst.asset` 的 `maxInstances` 已被设为 `1`, 因此当前每 clip 上限恰好承担了这层保护;
+  真正的通道级管理(混音总线、优先级、互斥)仍待 `OstScheme`.
+
+### 仍然存在的缺口 (未变)
+
+- **`Master.mixer` 的 `m_ExposedParameters` 仍为空数组**, 因此代码层面依然无法调节总线音量.
+  分组(SFX / OST)已建好, 但要在代码里控制它们, 需要先在 Inspector 中暴露参数. 此前的 TODO 依然有效.
+- `DISCLAIMER.md` 目前为英文, 而 §5.1.0 要求生成出的 `.md` 只用中文. 待用户确认是否改写.
+- 淡入淡出仍未实现: 抢占依旧是硬切.
+
+---
+
 ## 2026-10-03 — 修正: 归还调用与归还回调互相递归导致栈溢出
 
 **本条记录的是上一条修复所引发的回归.** 上一条补上了缺失的 `emitterPool.Release(emitter)`,

@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: DefaultAudioManagerConfigs
   m_EditorClassIdentifier: 
   audios:
+  - {fileID: 11400000, guid: d15e0c703738ee1458c373bc0c8be955, type: 2}
   - {fileID: 11400000, guid: 35d9bb617c495a540b8dea30430efd7c, type: 2}
   - {fileID: 11400000, guid: f9b1025f320a5494a8154983ce646c10, type: 2}
   collectionCheck: 1

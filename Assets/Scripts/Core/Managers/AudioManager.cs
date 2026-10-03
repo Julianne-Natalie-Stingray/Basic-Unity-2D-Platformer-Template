@@ -130,7 +130,7 @@ public class AudioManager : MonoBehaviour
     /// 而禁用本管理器的情况. 之后校验请求, 通过抢占最旧且可抢占的声音执行两级实例上限,
     /// 预定 emitter, 注册它并启动. 请求被拒绝时返回 null 并记录日志, 而不是静默丢弃.
     /// </summary>
-    public ISoundHandle Play(AudioId requested, float volume, float pitch, Transform followTarget)
+    public ISoundHandle Play(AudioId requested, float volume, float pitch, Vector3? position, Transform followTarget)
     {
         if (!enabled || !configs || emitterPool == null)
             return null;
@@ -163,6 +163,9 @@ public class AudioManager : MonoBehaviour
         emitter.onAudioFinished += ReleaseEmitter;
         emitter.onAudioFinished += OnEmitterRelease;
         emitter.Configure(data);
+
+        if (position.HasValue)
+            emitter.SetPosition(position.Value);
 
         if (followTarget)
             emitter.SetFollowTarget(followTarget);

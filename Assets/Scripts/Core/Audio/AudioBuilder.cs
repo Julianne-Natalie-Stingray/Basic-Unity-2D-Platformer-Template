@@ -35,6 +35,7 @@ public struct AudioBuilder
     private float volume;
     private float pitch;
     private Transform followTarget;
+    private Vector3? position;
     private bool isUsed;
 
     internal AudioBuilder(AudioManager manager)
@@ -44,6 +45,7 @@ public struct AudioBuilder
         volume = 1f;
         pitch = 1f;
         followTarget = null;
+        position = null;
         isUsed = false;
     }
 
@@ -89,6 +91,24 @@ public struct AudioBuilder
     }
 
     /// <summary>
+    /// Place this request at an explicit world position.
+    /// Implementation approach: records the point and leaves following untouched. Position and follow are
+    /// exclusive in practice -- a follow target drives the position every frame, so passing both lets the
+    /// target win -- and a request that passes neither keeps the emitter at AudioRoot.
+    /// 把本次请求放在指定的世界坐标.
+    /// 实现思路: 记录该点, 不触碰跟随状态. 位置与跟随在实践中互斥 —— 跟随目标每帧驱动位置, 因此两者都传时跟随胜出 ——
+    /// 两者都不传时 emitter 停在 AudioRoot.
+    /// </summary>
+    public AudioBuilder WithPosition(Vector3 position)
+    {
+        if (isUsed)
+            return this;
+
+        this.position = position;
+        return this;
+    }
+
+    /// <summary>
     /// Make this sound follow a Transform. The emitter syncs to it from LateUpdate and is never parented to
     /// it, so the sound survives the target being destroyed: a one-shot plays out where the target was last
     /// seen, while a loop stops, because a loop has no natural end and would hold a pooled emitter forever.
@@ -121,6 +141,6 @@ public struct AudioBuilder
 
         isUsed = true;
 
-        return manager.Play(audioId, volume, pitch, followTarget);
+        return manager.Play(audioId, volume, pitch, position, followTarget);
     }
 }

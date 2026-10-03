@@ -10,11 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4790efb8cde0df54db4113b5a72f3215, type: 3}
-  m_Name: GenericAudioClipData
+  m_Name: GenericOst
   m_EditorClassIdentifier: 
-  audioId: 0
-  clip: {fileID: 8300000, guid: 8454236ba50e36247835a1d7430b6eaf, type: 3}
-  mixerGroup: {fileID: 5747262707835034664, guid: a6b573f691acdc44a9421d10d0de8b7a, type: 2}
-  loop: 0
-  playOnAwake: 1
-  maxInstances: 5
+  audioId: 1
+  clip: {fileID: 8300000, guid: ea52c6f1122bf3647a2ceb1e2bd36e33, type: 3}
+  mixerGroup: {fileID: 7673701289520986992, guid: a6b573f691acdc44a9421d10d0de8b7a, type: 2}
+  loop: 1
+  maxInstances: 1
+  volume: 1
+  pitch: 1
+  spatialBlend: 0.5
+  minDistance: 1
+  maxDistance: 20

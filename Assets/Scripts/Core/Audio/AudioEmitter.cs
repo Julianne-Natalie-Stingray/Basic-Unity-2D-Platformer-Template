@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 /// <summary>
 /// One pooled audio voice. It plays one clip and reports when that playback is over.
@@ -33,12 +34,13 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class AudioEmitter : MonoBehaviour
 {
-    public event System.Action<AudioEmitter> onAudioFinished;
+    public event Action<AudioEmitter> onAudioFinished;
 
-    public AudioId AudioId => data ? data.AudioId : AudioId.Default;
+    public AudioId AudioId => data ? data.AudioId : AudioId.DefaultSfx;
     public bool IsPlaying => source && source.isPlaying;
     public bool IsFinished => isFinished;
     public bool IsLooping => data && data.Loop;
+    public bool IsFollowingTarget => followTarget;
 
     public float Volume
     {
@@ -79,11 +81,25 @@ public class AudioEmitter : MonoBehaviour
     private const float MinPitch = 0.1f;
     private const float MaxPitch = 3f;
 
+    private bool willFollowTarget;
+
     private void Awake()
     {
         InitializeInternal();
     }
 
+    /// <summary>
+    /// Single entry point for the per-frame work of a live playback.
+    /// Implementation approach: applies a pending volume immediately for every playback, because a handle may
+    /// change volume at any time; then syncs position only while a follow target is actually being requested.
+    /// Those two are independent: gating the volume write on follow would silently drop it for every sound
+    /// that does not follow, and syncing position for a sound that follows nothing would read a null target.
+    /// 进行中的播放每帧工作的单一入口.
+    /// 实现思路: 待应用的音量对每种播放都立即写入, 因为句柄随时可能改音量;
+    /// 位置同步只在确实请求了跟随目标时进行.
+    /// 二者互相独立: 用跟随去门控音量写入会让每个不跟随的声音静默丢失音量变更;
+    /// 而给一个不跟随任何东西的声音做位置同步则会去读一个空目标.
+    /// </summary>
     private void LateUpdate()
     {
         if (!IsPlaying)
@@ -94,6 +110,9 @@ public class AudioEmitter : MonoBehaviour
             source.volume = volume;
             isVolumeDirty = false;
         }
+
+        if (!willFollowTarget)
+            return;
 
         SyncPosition();
     }
@@ -127,6 +146,10 @@ public class AudioEmitter : MonoBehaviour
         source.clip = data.Clip;
         source.loop = data.Loop;
         source.outputAudioMixerGroup = data.MixerGroup;
+
+        source.spatialBlend = data.SpatialBlend;
+        source.minDistance = data.MinDistance;
+        source.maxDistance = data.MaxDistance;
     }
 
     /// <summary>
@@ -208,6 +231,23 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>
+    /// Single entry point for placing this emitter at an explicit point.
+    /// Implementation approach: writes only the world position and leaves following untouched, so the caller
+    /// may pass a position, a follow target, or neither. With none of them the emitter stays where the pool
+    /// left it, which is AudioRoot. A position is what makes a spatial clip audible from somewhere other than
+    /// the listener, so a clip with spatialBlend above zero is inert unless this or SetFollowTarget is used.
+    /// 把本 emitter 放到指定点的单一入口.
+    /// 实现思路: 只写世界坐标, 不触碰跟随状态, 因此调用方可以只给位置, 只给跟随目标, 或两者都不给.
+    /// 两者都不给时 emitter 停在池留下的位置, 即 AudioRoot.
+    /// 位置正是让空间化 clip 从非听者位置发声的前提, 所以 spatialBlend 大于零的 clip
+    /// 若不使用本方法或 SetFollowTarget, 其空间化是无效的.
+    /// </summary>
+    public void SetPosition(Vector3 position)
+    {
+        transform.position = position;
+    }
+
+    /// <summary>
     /// Single entry point for handing this emitter its position source.
     /// Implementation approach: stores the Transform and tracks it from LateUpdate instead of reparenting,
     /// so the emitter is not a child of the target and does not die with it.
@@ -233,6 +273,7 @@ public class AudioEmitter : MonoBehaviour
         followTarget = target;
         lastTargetPosition = target.position;
         transform.position = lastTargetPosition;
+        willFollowTarget = true;
     }
 
     /// <summary>
@@ -253,6 +294,7 @@ public class AudioEmitter : MonoBehaviour
 
         data = null;
         followTarget = null;
+        willFollowTarget = false;
 
         isPlaying = false;
         isFinished = false;
@@ -304,6 +346,7 @@ public class AudioEmitter : MonoBehaviour
     {
         followTarget = null;
         transform.position = lastTargetPosition;
+        willFollowTarget = false;
 
         if (IsLooping)
             Stop();

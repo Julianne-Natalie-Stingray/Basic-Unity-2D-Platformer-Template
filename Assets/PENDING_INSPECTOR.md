@@ -58,7 +58,20 @@ DSH 不得开始任何依赖这些 Inspector 赋值的新工作.
    无限递归, 栈溢出. 已拆成两个方法: `ReleaseEmitter`(只转发给池)与 `OnEmitterRelease`(只做清理, 绝不调用 Release).
    同时修掉一个潜在缺陷: `ReleaseEmitter` 此前只订阅不退订, 复用 emitter 时会累积订阅, 导致同一次结束被多次归还.
 
+6. **空间化交付**: `AudioClipData` 新增 `SpatialBlend` / `MinDistance` / `MaxDistance`,
+   `AudioEmitter.Configure()` 写入它们, 并新增 `SetPosition` / `AudioBuilder.WithPosition`.
+
 ### 请复验(按顺序)
+
+- [x] **脚本编译已完成并核实**: 首次编译报 `CS0246`(`BoxGroup` 缺少 `using NaughtyAttributes;`), 已修正.
+  修正后 `Assembly-CSharp.dll` @ `17:48:01`(`51712` -> `52736` 字节), 产物含 `SetPosition` / `WithPosition` /
+  `SpatialBlend` / `MinDistance` / `MaxDistance`, 且导入日志无任何 `CS####` 诊断.
+
+- [x] 在三个 `AudioClipData` 上按需设置 `SpatialBlend`(0 为纯 2D). 默认 `0`, 故现有听感不变;
+  只有 `SpatialBlend > 0` 且**同时**给出 `WithPosition` 或 `WithFollowTarget` 时才会听到位置差异.
+
+- [x] 确认 `Main Camera` 的 z 值(`-10`)带来的距离偏移可接受. 你已确认"计算不需太精确, 只做大致 spatial 效果",
+  此处仅作提醒: 相机移动会改变音量, 因为唯一 `AudioListener` 在相机上而 `AudioRoot` 在原点.
 
 - [x] **确认不再栈溢出**: 这是本轮的阻塞项. 你此前在 `AudioManager.cs:287` 临时注释掉的那行 `emitterPool.Release(emitter)`
   现在已被正确的两方法结构取代, **请撤掉那处注释** —— 保留它会导致永不归还.

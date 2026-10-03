@@ -8,6 +8,8 @@ using UnityEngine;
 /// </summary>
 public enum AudioId
 {
-    Default,
+    DefaultSfx,
+    DefaultOst,
+    
     MouseClick
 }
