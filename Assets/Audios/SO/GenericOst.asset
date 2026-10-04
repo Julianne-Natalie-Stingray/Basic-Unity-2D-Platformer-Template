@@ -16,9 +16,10 @@ MonoBehaviour:
   clip: {fileID: 8300000, guid: ea52c6f1122bf3647a2ceb1e2bd36e33, type: 3}
   mixerGroup: {fileID: 7673701289520986992, guid: a6b573f691acdc44a9421d10d0de8b7a, type: 2}
   loop: 1
+  defaultSurviveFreeze: 1
   maxInstances: 1
   volume: 1
   pitch: 1
-  spatialBlend: 0.5
+  spatialBlend: 0
   minDistance: 1
   maxDistance: 20

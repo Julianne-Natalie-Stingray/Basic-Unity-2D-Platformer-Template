@@ -36,6 +36,8 @@ public struct AudioBuilder
     private float pitch;
     private Transform followTarget;
     private Vector3? position;
+    private bool? surviveFreeze;
+    private bool? allowWhileFrozen;
     private bool isUsed;
 
     internal AudioBuilder(AudioManager manager)
@@ -46,6 +48,8 @@ public struct AudioBuilder
         pitch = 1f;
         followTarget = null;
         position = null;
+        surviveFreeze = null;
+        allowWhileFrozen = null;
         isUsed = false;
     }
 
@@ -126,6 +130,46 @@ public struct AudioBuilder
     }
 
     /// <summary>
+    /// Override, for this request only, whether the playback is kept while the game is frozen.
+    /// Implementation approach: records a nullable override. Absent means the clip's static initial is used,
+    /// which is the same static/dynamic split the rest of this builder follows. Being kept has nothing to do
+    /// with whether the clip loops; those are independent, and this method is the dynamic half of the first.
+    /// 仅对本次请求覆盖"游戏冻结时是否保留该播放".
+    /// 实现思路: 记录一个可空覆盖; 不设置即使用 clip 的静态初值 —— 与本 Builder 其余部分遵循同一套静态/动态划分.
+    /// "是否被保留"与"是否循环"无关; 两者独立, 而本方法是前者中动态的那一半.
+    /// </summary>
+    public AudioBuilder WithSurviveFreeze(bool survive)
+    {
+        if (isUsed)
+            return this;
+
+        surviveFreeze = survive;
+        return this;
+    }
+
+    /// <summary>
+    /// Override, for this request only, whether it is accepted at all while the game is frozen.
+    /// Implementation approach: records a nullable override consulted by AudioManager before it reserves an
+    /// emitter. This is a different question from WithSurviveFreeze: that one decides whether a sound already
+    /// playing is kept, whereas this one decides whether a request arriving during a freeze is served at all.
+    /// It exists for requests that must be refused during a freeze, such as sounds driven by gameplay that is
+    /// not supposed to be running.
+    /// 仅对本次请求覆盖"游戏冻结期间该请求是否被受理".
+    /// 实现思路: 记录一个可空覆盖, 由 AudioManager 在预定 emitter 之前查询.
+    /// 这与 WithSurviveFreeze 是不同的问题: 后者决定已在播放的音是否被保留,
+    /// 而本方法决定冻结期间到达的请求是否被服务. 它存在的意义是让"冻结期间必须被拒绝"的请求得以表达,
+    /// 例如由本不该运行的玩法所驱动的音效.
+    /// </summary>
+    public AudioBuilder WithAllowWhileFrozen(bool allow)
+    {
+        if (isUsed)
+            return this;
+
+        allowWhileFrozen = allow;
+        return this;
+    }
+
+    /// <summary>
     /// Single entry point for submitting this request.
     /// Implementation approach: forwards every carried parameter to AudioManager, which applies the instance
     /// limits, may preempt an older sound, and returns a handle scoped to the playback it started.
@@ -141,6 +185,6 @@ public struct AudioBuilder
 
         isUsed = true;
 
-        return manager.Play(audioId, volume, pitch, position, followTarget);
+        return manager.Play(audioId, volume, pitch, position, followTarget, surviveFreeze, allowWhileFrozen);
     }
 }

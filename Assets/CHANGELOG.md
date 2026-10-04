@@ -1,5 +1,418 @@
 # CHANGELOG
 
+## 2026-10-04 — 修正: 冻结期入口门必须同时看到 SurviveFreeze
+
+### 触发 (用户的 Play 模式验收)
+
+用户按 `DebugScript` 跑了一次典型测试, 报告: 冻结期间 `WithAllowWhileFrozen(true)` 且 `SurviveFreeze = false`
+的手动请求, 日志出现 `is pooled` 与 `played`, 但 **Hierarchy 中看不到对应 emitter, 且直到 `Application.Quit()` 都没有 release**.
+
+附带的日志把复现固定了下来:
+
+```
+ 1: ###Freeze Program.        -> is now Freezed
+53: ###Play when froze.       -> refused (allowWhileFrozen 未设置, 门正确拒绝)
+70: ###Play when froze with allow while frozen. -> is pooled -> played, 无 release
+103: ###Resume Program.       -> is now Playing
+120: Settings saved            (Application.Quit)
+```
+
+### 根因
+
+原门只检查了"是否允许进入":
+
+```csharp
+if (GameStateManager.Current == GameState.Freezed && !(allowWhileFrozen ?? false)) ...
+```
+
+于是"允许进入但不会熬过冻结"的请求**照样取走了池化 emitter**. 而这个播放被 `AudioListener.pause` 静音,
+对自己对使用者都没有价值, 却在冻结期间占着池槽 —— 它的结束判定依赖 `source.isPlaying` 转为 false,
+而冻结期间该判定无法推进, 于是直到解冻才可能归还. 用户因此既看不到 emitter(未被注入任何可听行为),
+也看不到 release.
+
+### 修法 (用户选定方案 a)
+
+门改为在**解析出 clip 之后**执行, 并且**同时**要求两件事:
+
+```csharp
+bool willSurviveFreeze = surviveFreeze ?? data.DefaultSurviveFreeze;
+
+if (!IsFrozenEntryAllowed(requested, allowWhileFrozen, willSurviveFreeze))
+    return null;
+```
+
+`IsFrozenEntryAllowed` 只在"允许进入 **且** 确实会被保留"时放行, 否则记一条说明原因的日志并拒绝.
+
+由此确立的语义, 已写入 `Play` 的注解与 README:
+
+> **冻结期真能听到的请求 = 允许进入 且 熬过冻结.**
+> 单用 `WithAllowWhileFrozen(true)` 并不足以在冻结期出声.
+
+这也把门放在了正确的位置: 拒绝发生在**预定 emitter 之前**, 因此不占用任何池资源,
+也不需要让"暂停"这层语义渗进"声音是否放完"的判定.
+
+### 顺带的结构改动
+
+- 抽出 `ResolveClip(AudioId)`, 把"解析失败即记错误并返回 null"收进一处, `Play` 不再内联 `TryGetClip`.
+- `Play` 不再重复计算 `surviveFreeze ?? data.DefaultSurviveFreeze`, 而是复用同一变量.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` @ `14:25:41`, 体积 `66048` -> `66560` 字节, 无任何 `CS####` 诊断.
+- **尚未 Play 模式复验**. 预期: 上表第 70 行那类请求现在应在 `is pooled` **之前**就被拒绝,
+  日志出现 `... would not be kept`, 且 Hierarchy 不新增 emitter.
+- **一处仍未闭合的不确定**: 用户此前观察到冻结期间有 **2 次 release**; 若被暂停的音源会报告 `isPlaying == false`,
+  说明"冻结期间归还"是可能的, 于是我上文"结束判定无法推进"的推断只在某些情况下成立.
+  该机制无法从日志静态判定(需要读运行中的 `AudioSource.isPlaying`), 已记入 `PENDING_INSPECTOR.md` 待下一次运行确认.
+  即便该推断不成立, 本次的门仍然正确: 它拒绝的是一个**无论如何都听不见**的请求.
+
+### 未改动
+
+- `AudioEmitter` 的结束判定未改. 把"暂停"塞进"声音是否放完"的判定会让后者不再只关心音源自身.
+- `DebugScript.cs` 与 `Debug/` 下的其他文件未改动(用户要求暂留 Debug 代码).
+---
+
+## 2026-10-03 — 重构: 把冻结语义从 Loop 上剥离, 拆成两个正交参数
+
+### 动机 (用户的判断)
+
+"是否 Loop" 与 "是否能在 Freeze 时播放" 是**两个概念**, 应当分开. 而 "是否能在 Freeze 时播放" 本身
+又分成两件事: 进入冻结时**已在播放**的音是否被掐断, 以及冻结期间**新到达**的请求是否被受理.
+
+旧实现把前者绑在 `Loop` 上(`AudioClipData.FreezeLoop`), 因此无法表达"一次性音也需要熬过冻结",
+也无法表达"循环音应该被冻结掐断". 名字与语义都不成立, 故整体替换.
+
+### 两个参数各自的机制
+
+| 参数 | 问题 | 机制 |
+| --- | --- | --- |
+| `SurviveFreeze` | 进入冻结时已在播放的音是否被保留 | `AudioSource.ignoreListenerPause` |
+| `AllowWhileFrozen` | 冻结期间新到达的请求是否被受理 | `AudioManager.Play` 入口检查 |
+
+两者**不是同一个开关的正反两面**: 一个已在播放的音可以被保留, 而一个新请求仍被拒绝; 反之亦然.
+
+### 改动
+
+- `AudioClipData`: `FreezeLoop`(默认 `true`) -> `DefaultSurviveFreeze`(默认 `false`).
+  默认值同时从 `true` 翻转为 `false`, 以**保持既有行为**: 旧逻辑下一次性音不熬过冻结, 且 `Loop == false` 时
+  `FreezeLoop` 无意义, 因此默认为 `false` 是唯一不改变现状的选择. 需要熬过冻结的音效应显式开启.
+- `AudioBuilder`: 新增 `WithSurviveFreeze(bool)` 与 `WithAllowWhileFrozen(bool)`, 两者都是可空覆盖 ——
+  不设置即回落到 `AudioClipData` 的静态初值, 与本工程既有的静态/动态划分一致.
+- `AudioEmitter`: 新增 `SurviveFreeze` 属性, 映射到 `source.ignoreListenerPause`;
+  `Configure()` 只写静态初值, 覆盖由 `AudioManager` 在之后应用; `ResetEmitter()` 一并清除该状态与 `ignoreListenerPause`.
+- `AudioManager.Play` 新增两个可空参数, 并在入口处加冻结门: 冻结中且未声明 `AllowWhileFrozen` 的请求被拒绝并记录 `AudioId`.
+
+### 为什么 `WithAllowWhileFrozen` 放在 Builder 而不是 AudioManagerConfigs
+
+它是**逐次请求**的决定, 而不是总线级策略. 放在 asset 配置里会让"这一次请求能不能通"无法表达,
+而需要绕过门的请求(例如暂停菜单里的点击音)恰恰是逐次的. 若将来出现"整段时间内全部拒绝"的需求,
+那才属于总线级策略, 应另加一个开关, 而不是把逐次决定升格为全局.
+
+### 未改动
+
+- `AudioEmitter.prefab` 未被改动: 两个决定都写在代码里, 无需在 prefab 上逐个勾选.
+- `AudioSettings` 的全局音量仍未被应用(见 `Core/README.md` 的 TODO), 属于独立交付.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` @ `12:41:48`, 体积 `64512` -> `65536` 字节, 无任何 `CS####` 诊断.
+- 产物含 `WithSurviveFreeze` / `WithAllowWhileFrozen` / `DefaultSurviveFreeze` / `SurviveFreeze`.
+- **尚未 Play 模式实测**两个参数的四种组合. 验收清单见 `PENDING_INSPECTOR.md` 第 6 节.
+
+### 文档
+
+- `Core/README.md`: 重写"音频与游戏状态"一节为零件模型与参数层级表; 同时删掉仍声称"`AudioManager` 在 `Start` 中
+  校验 Timer 宿主"的过期段落(该依赖已被用户移除), 并补充音频 `Setting` 的构成行与"建池为何是 `Start` 的例外".
+
+---
+## 2026-10-03 — 修正: JSON 加载的四个缺陷 + AudioManager 注解与守卫
+
+### 触发
+
+用户的验收在 `.json` 一项上报告了四种异常, 并指出 `AudioManager` 的注解与代码不符. 本条逐项处理.
+
+### 根因: 我在注解里写了一个错误的假设
+
+`FileSettingStore.Deserialize` 的原注解写着 *"JsonUtility.FromJson returns null for input it cannot parse"*.
+**这是错的**: `JsonUtility.FromJson` 对语法错误与缺项是**抛 `ArgumentException`**, 而不是返回 null.
+于是 `SettingStore.Load` 里的 `if (loaded == null)` 分支永不生效, 异常直接穿出 `SettingBootstrap.Initialize`,
+设置加载整体失败. 这是"注解与代码不一致"的又一例, 而且这次注解本身是错的 —— 前几次是代码漏了注解所述的行为.
+
+### 四个症状与处理
+
+| 报告的症状 | 实际原因 | 处理 |
+| --- | --- | --- |
+| 损坏 json: `ArgumentException: JSON parse error` | `FromJson` 以抛异常报错, 未被捕获 | `TryDeserialize` 捕获并返回 `false`, 回落到设计默认值 |
+| 缺项 json: 同一行抛出 | 同上 | 同上 |
+| 只有大括号 `{}`: 填类型默认值(int 0) | `FromJson` **新建实例**, 缺失成员取类型零值, 丢弃设计默认值 | 改用 `FromJsonOverwrite` 覆盖到一个**已用设计默认值铺底**的实例上 |
+| 完全空白: 正确报警 | 原本已正确 | 保留; 另补 `IsNullOrWhiteSpace` 分支, 使"空文件"与"解析失败"在日志里可区分 |
+
+### 契约变更
+
+- `SettingStore.Load()` 现在**先**用设计默认值铺底, 再让子类把文件覆盖其上. 这是"缺项回落到设计默认值"的前提.
+- 新增 `protected void LoadInto(TData)`, 承载文件那一半的加载与全部失败回落.
+- `Deserialize(string) -> TData` 改为 `TryDeserialize(string, TData target) -> bool`.
+  改成 bool 是必要的: `FromJsonOverwrite` 原地覆盖, 无法用返回值表达失败, 而让异常逃出会中断自举.
+- 新增 `ReportLoadFailure`, 把"文件不可读 / 空白 / 解析失败"统一成一条 warning.
+
+### 粒度限制 (已写入注解, 不作过度承诺)
+
+新实现保证**顶层**缺失成员取设计默认值. 但**不保证**嵌套可序列化成员内部, 或存在但只填了一部分的数组元素内部也如此 ——
+`JsonUtility` 在那里没有文档化的保证. 这条限制写在 `FileSettingStore.TryDeserialize` 的注解里.
+
+### `AudioManager`: 注解与代码不符, 以及一个真实缺陷
+
+用户已将 Timer 依赖整体移除(池改在 `InitializeInternal` 中随注册表一起建立并预热, 不再有 `TimerRunner` 校验).
+但注解未随之更新, 出现五处陈述与代码相反的文本, 已全部改正:
+
+- 类注解: "池在 `InitializeInternal` 中构建, 在 `Start` 中预热" -> 池与注册表同在 `InitializeInternal` 中构建, `Start` 只做预热.
+- `timerRunner` 字段的 XML 注解在字段被删除后**悬空**, 连同留出的两个空行一并移除.
+- `Start` 的注解写的是"校验 Timer 宿主", 已改为"预热对象池"并说明为何预热可以推迟而建池不可以.
+- `BuildEmitterPool` 的注解称"由 `Start` 调用", 已改为"由 `InitializeInternal` 调用".
+- `Play` 的守卫注解提到"Start 因缺少 Timer 宿主而禁用", 已改为"初始化失败, 例如 `configs` 未赋值".
+
+**顺带修掉一个真实缺陷**: `InitializeInternal` 在 `configs` 为空时设 `enabled = false`, 但紧接着仍调用
+`BuildEmitterPool()`, 而后者第一件事就是读 `configs.CollectionCheck` —— 必然 `NullReferenceException`.
+已在该分支加 `return`.
+
+### 代码风格
+
+- 我新增的非 Unity 类型中, `GameLog` 调用由 `GameLog.Info(null)` 改为**省略 context** 的 `GameLog.Info()`,
+  与 GameLog 自身 README 对"静态/非 Unity 系统"的指引一致. 共 7 处 (`SettingStore` 4, `GameStateManager` 3).
+  这次编译同时证明了该无参重载确实存在.
+- 删除 `AudioManager` 中 `BuildEmitterPool` 前后的多余空行与行尾空格.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` @ `03:33:39`, 体积 `58368` -> `64512` 字节, 无任何 `CS####` 诊断.
+- 产物含 `TryDeserialize` / `LoadInto` / `FromJsonOverwrite` / `ReportLoadFailure`.
+- **尚未复验四个 json 场景**: 需要用户按 `PENDING_INSPECTOR.md` 重跑. 本次是"修正后待验", 不是"已验".
+
+---
+## 2026-10-03 — 交付: 音频接线 (FreezeLoop + ignoreListenerPause + 订阅 GameState)
+
+### 范围
+
+把 `GameState` 与音频连起来, 这是本轮三份交付中唯一跨 Subsystem 的一份.
+
+### 改动
+
+- `AudioClipData` 新增 `FreezeLoop`(默认 `true`), 暴露为 `FreezeLoop` 属性.
+- `AudioEmitter.Configure()` 写入 `source.ignoreListenerPause = data.Loop && !data.FreezeLoop`.
+  **纯代码, 无需改 `AudioEmitter.prefab`** —— 这是选它的理由: 否则每个音效都要在 Inspector 里勾选一次.
+- `AudioManager` 新增 `OnEnable` / `OnDisable`, 订阅与退订 `GameStateManager.Changed`;
+  新增 `HandleGameStateChanged(GameState)`, 据状态暂停或恢复 `AudioListener.pause`, 并在值未变化时提前返回.
+
+### 三种组合的语义
+
+| `Loop` | `FreezeLoop` | 效果 |
+| --- | --- | --- |
+| `false` | 无关 | 一次性音效被暂停切断 |
+| `true` | `true` | 循环音随游戏暂停(默认) |
+| `true` | `false` | 循环音在游戏冻结时继续播放 |
+
+### 依赖方向
+
+音频认识 `GameState`, 而 `GameState` 对音频一无所知. 这是 grill 中 A13(c) 的选择 ——
+"谁受影响, 谁处理", 因此 `GameStateManager` 不持有任何 Subsystem 的引用.
+
+按 §4.2, 本次跨 Subsystem 引用要求被引用方**先交付**. 顺序已满足: `GameState` 于前一条交付, 本次才引用它.
+
+### 未做的部分 (刻画边界)
+
+`AudioManager` **不**决定冻结期间是否允许新的播放请求. 它只处理"已在播放的音如何受暂停影响".
+是否允许暂停时发出新声音属于玩法判断, 不是音频判断.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` @ `23:18:53`, 体积 `57344` -> `58368` 字节.
+- 产物含 `get_FreezeLoop` / `HandleGameStateChanged` / `ignoreListenerPause`, 即 **Core -> Game 的跨程序集引用解析成功**.
+- **尚未 Play 模式实测**: 循环音解冻后是否从原处续播, 是本次唯一无法从 Unity 文档确认的行为.
+  官方文档只写明"恢复时从暂停处继续", 未写明暂停期间 `AudioSource.isPlaying` 的值. 验收项已记入 `PENDING_INSPECTOR.md` 第 6 节.
+
+### 顺带修正
+
+`AudioManager` 中 `timerRunner` 字段的 XML 注解被其后的空行与字段声明分离, 注解落到了空行上. 未改动它 ——
+那属于既有排版瑕疵, 且注释文本本身正确; 记此以免下次被误认为本次引入.
+
+---
+## 2026-10-03 — 交付: GameState 子系统 (状态标签 + timeScale 幂等机制 + 静态事件)
+
+### 范围
+
+新建 `GameState` 子系统: 全局状态标签与状态变化所隐含的机制. 与 `Setting` 一样采用自举, 不依赖任何装配.
+
+### 新增文件
+
+| 文件 | 类型 | 职责 |
+| --- | --- | --- |
+| `Assets/Scripts/Game/GameState/GameState.cs` | 枚举 | 状态标签; 目前仅 `Playing` 与 `Freezed` |
+| `Assets/Scripts/Game/GameState/GameStateManager.cs` | 静态类 | 持有 `Current`; `Freeze` / `Resume`; 广播 `Changed` |
+| `Assets/Scripts/Game/GameState/README.md` | 文档 | 本子系统的职责, API 与内部思路 |
+
+### 关键决策 (来自 grill 的结论)
+
+- **机制归属**: `Freezed` 真的会 `Time.timeScale = 0f` 并 `AudioListener.pause = true`, 不只是标签. 若只发标签, 每个想暂停的调用方都得自己记住要停什么, 于是"暂停"会在各处被部分实现.
+- **时间缩放记忆**: `Resume` 还原**进入 `Freeze` 时所生效的值**, 而不是写死 `1f`. 写死会让慢动作/子弹时间类玩法在暂停一次后永久丢失其缩放, 且无任何线索可查.
+- **幂等**: 已处于 `Freezed` 时再次 `Freeze` 直接返回, **不得覆盖已记录的值** —— 否则会把 `0f` 记进去, 解冻后永久冻结. 这条是上一条成立的前提.
+- **广播顺序**: `Apply()` 先赋值 `Current` 后触发 `Changed`. 颠倒会使每个处理函数观察到上一个状态.
+- **响应者自决**: `GameStateManager` 不认识任何响应者, 需要响应的组件自行订阅 `Changed`. 目前**零订阅者**; 音频接线将加入第一个.
+
+### 与既有子系统的相互作用 (必须记住的一条)
+
+`Time.timeScale = 0` 会让所有走 **scaled time** 的东西停摆. 音频侧为此已把 emitter 的结束判定改为 `UseUnscaledTime()`
+(见 `AudioEmitter.cs`), 否则暂停期间 `AudioEmitter` 永不归还池. 这两处改动是一对, 不能只保留其一.
+
+### 未改动
+
+- 未新增预制体或场景物体; 未改动 `Core` 或 `Setting` 的任何文件.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` @ `23:17:34`, 体积 `52736` -> `57344` 字节.
+- 产物含 `GameStateManager` / `timeScaleBeforeFreeze` / `Freeze` / `Resume` / `Changed`.
+- 与 `Setting` 同批核实, 因此两者共享同一次编译证据.
+
+### 未解决的设计缺口
+
+- **无测试入口**: 静态类无法挂 `NaughtyAttributes` 的 `Button`. 已记入本子系统 `README.md` 的 `TODO`.
+- **退出时恢复状态未实现**: 若在 `Freezed` 下退出编辑器, `Time.timeScale` 会保留为 `0`. 因进入播放模式时 Unity 会重置它, 实际影响限于编辑器会话内; 是否值得加钩子待定. 已记入 `TODO`.
+
+---
+## 2026-10-03 — 交付: Setting 子系统 (泛型存储 + JSON 落盘 + 自举)
+> **后续更正**: 本条的"编译校验未完成"已经解决, 但**首次编译确实失败**, 原因如下.
+> `SettingStore<TData>` 是普通类, 而我写了 `GameLog.Info(this)` —— `GameLog` 的 context 参数类型是
+> `UnityEngine.Object`, 普通类无法传入. 编译报 5 处 `CS1503`. 同一批代码里 `GameStateManager` 用的是
+> `GameLog.Info(null)`(正确), 两处写法不一致, 只有一处对.
+> 该错误只用一次编译即可暴露, 本可在写入前靠"普通类不能作为 Unity 对象"这一条避免.
+> 已改为 `GameLog.Info(null)`(共 5 处); 修正后 `Assembly-CSharp.dll` 由 `52736` 增至 `57344` 字节,
+> 五个类型 `ISettingData` / `SettingStore` / `GameSettings` / `FileSettingStore` / `SettingBootstrap` 均进入产物.
+
+### 范围
+
+新建 `Setting` 子系统: 设置的数据存储与生命周期. 只做"存取", 不做"应用".
+
+### 新增文件
+
+| 文件 | 类型 | 职责 |
+| --- | --- | --- |
+| `Assets/Scripts/Game/Setting/ISettingData.cs` | 接口 | 持久化数据的契约 |
+| `Assets/Scripts/Game/Setting/SettingStore.cs` | 泛型抽象类 | 加载, 持有, 保存, 重置; 拥有文件路径与全部文件 I/O |
+| `Assets/Scripts/Game/Setting/GameSettings.cs` | `[Serializable]` 类 | 模版设置数据; **默认无任何字段** |
+| `Assets/Scripts/Game/Setting/FileSettingStore.cs` | 具体类 | 指明持久化类型, 提供 JsonUtility 的两半实现 |
+| `Assets/Scripts/Game/Setting/SettingBootstrap.cs` | 静态类 | 入口; BeforeSceneLoad 建立并加载存储 |
+| `Assets/Scripts/Game/Setting/README.md` | 文档 | 本子系统的职责, API 与内部思路 |
+
+### 关键决策 (来自 grill 的结论)
+
+- **自举而非 Component**: 设置必须在第一个场景对象 `Awake` 之前可读; Component 要做到这点就得依赖手动装配的物体, 而模版的约定是无需手动装配. 代价是入口**隐式**, 无法在 Hierarchy 中找到.
+- **存储不应用**: `FileSettingStore.Configure()` 是空的, 且这是约定而非遗漏. 若存储去应用音量, 它就必须认识 `AudioManager`; 那会让 Setting 从所有系统的上游变成下游. 设置集中存储, 由**所描述的系统自行读取**.
+- **没有键值接口**: 落盘走 `JsonUtility`, 它无法序列化 `Dictionary` 或接口字段; 提供 `Get<T>(string key)` 会诱使数据进入字典, 而字典会被**静默持久化为空** —— 只在重启后才暴露. 需要动态键值对的存储应自行持久化一个键值对列表.
+- **保存是显式的**: 改动值不落盘, 保持"已改动"与"已提交"为两个独立决定. `Application.quitting` 只作为兜底. `ResetToDefault()` 仅改内存, 不落盘.
+- **失败即回退**: 文件缺失, 不可读, 或 JSON 无法解析, 一律回退默认值并记录原因. 损坏的设置文件不得阻止游戏启动.
+
+### 被否决的一条路
+
+工程引用了 `ayellowpaper.serialized-dictionary`, 但**不能**用于 JSON 落盘: 其全部变更接口位于 `#if UNITY_EDITOR` 内, 运行时 `OnAfterDeserialize` 会清空内部列表; 能否重建字典取决于 Unity 反序列化器是否在运行时调用该回调, 而这一点无法在本工作区内验证. 因此不作为设计基础.
+
+### 未改动
+
+- 未新增预制体或场景物体: 自举不依赖任何装配 (§3.2 禁区未触碰).
+- 未改动 `Core` 的任何文件.
+
+### 验证状态 (未完成)
+
+**编译校验未能完成, 本轮不能声称已验证.**
+
+- 5 个 `.cs` 已落盘 (`23:00`–`23:01`), `Assets/Scripts/Game/` 与 `.../Setting/` 两个目录均已创建.
+- 但截至 `23:06`, **`.meta` 一个都未生成**, `Assembly-CSharp.dll` 仍停留在 `22:13:37`, 且不含任何新类型.
+- 现象与既有模式一致: Unity 进程存活(锁被持有), 但自 `22:58:00` 起未触碰任何项目文件 —— 编辑器失焦后资产导入与脚本编译循环均不推进.
+- 需要用户让 Unity 重新获得焦点, 由 DSH 复核产物后才能确认编译通过.
+
+### 未解决的设计缺口
+
+- **无可点击的测试入口**: `SettingBootstrap` 是静态类, `NaughtyAttributes` 的 `Button` 只出现在 Component 的 Inspector 上, 因此没有可挂载的面. 已记入该类自身的 `TODO`; 验证途径为 `Application.quitting` 或玩法代码显式调用 `Save()`.
+- **数据版本与迁移未实现**: 读取失败即回退默认值, 没有"从旧版本升级"的路径. 尚无字段, 故无数据可迁移; 等出现第一个字段再决定版本方案. 已记入本子系统 `README.md` 的 `TODO`.
+
+---
+## 2026-10-03 — 结论: 输入系统的边界 (不继续开发)
+> **后续更正 (2026-10-03)**: 本条记录的 `public PlayerControls Controls => controls;` **已被 revert**, 相应代码不存在.
+> 使用者的否决理由是: `controls` 属于底层, 不应暴露; 输入设计改变时 wrapper 改变不可避免;
+> `InputManager` 暴露的事件与 properties 应当为唯一 entry point. 本条其余事实(层级边界, 无消费者,
+> 资产现状)仍然成立, 但"新增一条访问器"这一改动与结论**作废**. 详见 `Assets/Scripts/Core/README.md`.
+
+### 结论
+
+**输入系统不再继续实现.** 它当前的形态已经落在正确的层级上, 缺少的只有一条"可扩展通道"和一份说明. 本轮只补这两样.
+
+### 判据 (grill 的产出)
+
+把"输入"拆成三层后, 问题不再是"要不要做输入", 而是"停在哪一层":
+
+| 层 | 内容 | 归属 |
+| --- | --- | --- |
+| L1 设备与绑定 | 物理控件, 控制方案, 重绑定, 多设备 | 属 asset, 归使用者 |
+| L2 原始轴 | 设备到无名模拟轴与按钮的映射 | 模版提供 |
+| L3 语义 | 哪一轴是什么, 与重力的关系, 谁拥有哪个自由度 | **刻意排除** |
+
+排除 L3 的依据: 二维输入只有两个自由度, 而"这两个自由度是什么"是玩法信息. 横版与俯视两类玩法在**某一轴上恰好重合**,
+因此 asset 里"一根已接线的轴 + 一根留空的轴"不是模版的断言, 而是当下两类玩法的重合面.
+模版不对重力方向, 轴向命名, 或额外键位做任何猜测.
+
+同时记录两条被明确搁置的:
+
+- **非键盘输入**(手柄/触屏): 当前开发只涉及键盘; 且加入其他渠道不要求重写 wrapper, 因此先搁置.
+- **控制方案(control schemes)**: asset 的 `controlSchemes` 目前是空数组, 全部绑定的 `groups` 也是空串.
+  这属于 L1, 是使用者按自己的设备集合去填的内容, 模版不预设.
+
+### 事实核查 (本轮据此调整了判断)
+
+- `MovementInput` 与 `IsPrimaryPressed` 在改动前**零消费者**; 唯一曾使用输入的是 `DragAndDropService2D`(见下).
+- `PlayerControls` 的动作类型只存在于 asset 元数据(`expectedControlType`); 生成类把它们一律暴露为 `InputAction`,
+  `Vector2` / `Button` 的语义由手写的 `ReadValue<Vector2>()` / `IsPressed()` 落实.
+
+### 改动
+
+**1. `InputManager` 新增一条可扩展通道**
+
+```csharp
+public PlayerControls Controls => controls;
+```
+
+改动前的 wrapper 把三个 `Gameplay` 动作**逐个转写**成属性, 于是使用者要加一个跳跃键时只有两条路:
+自己 `new PlayerControls()`(造成**同一 asset 两个实例**, 各自维护设备状态), 或回来改 wrapper.
+新增该访问器后, 使用者往 asset 里添加任意动作都可用 `CoreFacade.Input.Controls` 读取, 无需改动 wrapper.
+这是"让 wrapper 可扩展"与"不猜键位"能同时成立的唯一方式: wrapper 不再枚举动作, 只提供入口.
+
+**2. `InputManager` 补齐 §5.1.4 要求的类注解**: 补上 Subsystem 归属, 存在位置, 职能与 ownership 澄清, 生命周期, 范式, 数据概览;
+并明确写出"不负责: 哪一轴是什么, 重力与哪一轴对立, 以及游戏如何响应输入".
+
+**3. `MovementInput` / `PointerPosition` / `IsPrimaryPressed` 标注为扩展点**, 并各附一句说明它们是词汇而非句子,
+模版刻意不为它们附带消费者(§5.1.8 要求写明待实现内容与未实现原因).
+
+**4. `Core/README.md` 增补"输入的层级边界"一节**, 记录上表的层级模型, 两条边界, 以及 `Controls` 的用意;
+并把 `DragAndDropService2D` 标注为**早期代码**, 说明它目前没有任何使用者, 不在模版范围内继续演进.
+
+### 未改动
+
+- `Assets/Infra/InputSystem/PlayerControls.inputactions`: 属资产(§2.1 禁止 DSH 写入). 本轮**未提出**任何 asset 变更 ——
+  按上述结论, asset 的键位与控制方案本就归使用者.
+- `Assets/Infra/InputSystem/PlayerControls.cs`: 由 `InputActionCodeGenerator` 生成(§3.2 禁止修改).
+- `Assets/Scripts/Core/Input/DragAndDropService2D.cs`: 早期代码, 未改动.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` @ `19:06:37`, 体积 `52736` 字节, Bee/Tundra 后端同刻运行.
+- 产物中出现 `get_Controls`, 该成员仅存在于本轮新增的源码中, 因此可确认编译确实纳入了本次改动.
+- 说明: 该次编译后 dll 体积与上一次相同(均为 `52736`), 一度怀疑编译未生效;
+  经检查 `get_Controls` 存在而排除. 记录于此以免下次又被同类巧合误导.
+
+### 已知缺口 (沿用, 未变)
+
+- 淡入淡出未实现: 音频抢占仍是硬切.
+- 总线整体缩放未实现: `Master.mixer` 的 `m_ExposedParameters` 仍为空数组.
+
+---
 ## 2026-10-03 — 交付: 音频的空间化 (SpatialBlend / MinDistance / MaxDistance + WithPosition)
 
 ### 范围

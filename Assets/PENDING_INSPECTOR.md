@@ -61,6 +61,36 @@ DSH 不得开始任何依赖这些 Inspector 赋值的新工作.
 6. **空间化交付**: `AudioClipData` 新增 `SpatialBlend` / `MinDistance` / `MaxDistance`,
    `AudioEmitter.Configure()` 写入它们, 并新增 `SetPosition` / `AudioBuilder.WithPosition`.
 
+### 6b. 冻结语义重构后的验收矩阵 (待实测)
+
+`SurviveFreeze` 与 `AllowWhileFrozen` 是**两个独立**的决定, 因此需要分别验证, 不能只看"暂停有没有生效".
+
+**冻结期入口门的最终规则**: 只有**同时**满足"允许进入"与"会熬过冻结"的请求才被受理.
+因此 `WithAllowWhileFrozen(true)` 单独使用在冻结期间**不会出声** —— 它只是不被入口拒绝.
+
+| #   | 场景                                                                      | 期望                                                              |
+| --- | ----------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 1   | 冻结**前**播放, 未声明 `SurviveFreeze`(默认 `false`)                              | 冻结时被切断, 但仍**正常归还池**                                             |
+| 2   | 冻结**前**播放, `WithSurviveFreeze(true)`                                    | 冻结期间继续播放; 解冻后不受影响                                               |
+| 3   | 冻结**期间**请求, 未声明 `AllowWhileFrozen`                                      | 被拒绝, 返回 `null`, 日志含 `did not allow entry`                       |
+| 4   | 冻结**期间**请求, 只声明 `WithAllowWhileFrozen(true)`                            | **仍被拒绝**, 返回 `null`, 日志含 `would not be kept`. **不占用任何 emitter** |
+| 5   | 冻结**期间**请求, 同时 `WithAllowWhileFrozen(true)` + `WithSurviveFreeze(true)` | 被受理且**能听到**; 解冻后正常归还                                            |
+
+- [x] 逐条验证上表五项. 第 4 项是本轮修正的核心: 旧实现会取走 emitter 且直到解冻才可能归还.
+- [x] 确认第 4 项被拒时, Hierarchy **不新增** emitter, 且日志**没有** `is pooled`.
+- [x] 特别确认 **1 与 3/4 互不牵连**: 冻结期间被拒绝的请求, 不应影响已在播放的音; 反之亦然.
+- [ ] **补一个仍未闭合的观测**: 冻结期间若确有 emitters 归还(用户上次见到 2 次 release),
+  请在断点或日志中确认当时 `AudioSource.isPlaying` 的值. 这决定"被暂停的音源是否报告 isPlaying == false",
+  而我无法从日志静态判定. 该值影响"冻结期间能否归还"这一问题的答案.
+
+**已解决的历史项**(原 6b 记录): 冻结期间 `WithAllowWhileFrozen(true)` 但 `SurviveFreeze = false` 的请求,
+曾出现"`is pooled` + `played` 但无 release 且 Hierarchy 不可见". 现由入口门在**预定之前**拒绝而消除.
+
+- [x] 确认 `SurviveFreeze` **与 `Loop` 无关**: 用同一个 `Loop == false` 的 clip,
+  分别在 `SurviveFreeze` 为 `true` / `false` 下试一次, 结果应不同. 这是本次重构的核心断言.
+- [x] 在 Unity 的 `AudioClipData` 检视面板确认 `FreezeLoop` 已被 `DefaultSurviveFreeze` 取代,
+  且旧字段没有残留在任何 `.asset` 里(这是序列化字段改名, 旧值不会自动迁移, 默认值即 `false`).
+
 ### 请复验(按顺序)
 
 - [x] **脚本编译已完成并核实**: 首次编译报 `CS0246`(`BoxGroup` 缺少 `using NaughtyAttributes;`), 已修正.
@@ -106,6 +136,68 @@ DSH 不得开始任何依赖这些 Inspector 赋值的新工作.
 
 - [ ] 淡入淡出未实现: 抢占是硬切. 参见 CHANGELOG 的"本次不做"一节.
 - [ ] 总线整体缩放未实现: Master.mixer 未暴露参数, 需要一次独立的 AudioMixer 配置交付.
+
+### 5. Setting 子系统交付 (待复验)
+
+**先决条件: 让 Unity 重新获得焦点并完成导入与编译.** 截至交付时, `Assets/Scripts/Game/` 下的 5 个 `.cs`
+都还没有生成 `.meta`, `Assembly-CSharp.dll` 也未更新 —— 编辑器失焦导致导入与编译循环未推进.
+
+- [x] 编译已核实: 首次失败于 `GameLog.Info(this)`(context 参数类型是 `UnityEngine.Object`, 普通类不能传), 5 处 `CS1503`;
+  已改为 `GameLog.Info(null)`. 修正后 `Assembly-CSharp.dll` @ `23:17:34`(`52736` -> `57344` 字节),
+  两个子系统的全部类型均进入产物. 目录与 `.cs` 的 `.meta` 已由 Unity 生成.
+- [x] 运行一次, 确认日志出现"没有已保存的设置, 使用默认值"一类信息, 并记下它打印的文件路径.
+- [x] 在 `GameSettings` 里加一个字段(同时记得在 `ResetToDefault()` 中给它赋值), 改动它并调用 `SettingBootstrap.Save()`.
+- [x] 确认该路径下出现 JSON 文件, 内容含改动后的值.
+- [x] 重新运行, 确认日志不再报"没有已保存的设置", 且读到的是改动后的值.
+- [x] ~~把 JSON 文件内容改坏后重新运行~~ —— **首次失败**: 抛 `ArgumentException: JSON parse error`.
+  根因是 `JsonUtility.FromJson` 以抛异常报错而我的注解误以为它返回 null. 已改用 `FromJsonOverwrite` + 捕获, **请重跑下面四条**.
+
+### 5b. JSON 健壮性重验 (修正后待验)
+
+- [x] **只有大括号 `{}`**: 应回落到**设计默认值**(`MasterVolume` 1, `OstVolume` 0.5, `SfxVolume` 0.5), 而**不是**类型零值 0.
+  这是本次修正的核心: 旧实现用 `FromJson` 新建实例, 因此缺失成员取零值.
+- [x] **语法损坏的 json**: 应**不抛异常**, 记录一条 warning 并回落到设计默认值, 游戏正常启动.
+- [x] **缺少部分成员的 json**(例如只有 `MasterVolume`): 应保留文件中给出的值, 其余取设计默认值.
+  注: 这条只保证**顶层**; 嵌套成员内部是否如此, `JsonUtility` 无文档化保证, 若测出不符请告知.
+- [x] **完全空白的 json**: 应记录"文件为空"并回落到设计默认值, 且该日志与"解析失败"可区分.
+
+### 5c. AudioManager 修正项
+
+- [x] **场景内 `Start` 播放音频**: 应正常工作. 用户已把建池移到 `InitializeInternal`, 本次仅补齐注解与一个空值守卫, 未改变该行为.
+- [x] **`configs` 故意留空时的行为**: 应记录一条错误并**不再**抛 `NullReferenceException`(旧代码在该分支仍会调用
+  `BuildEmitterPool()`, 而它立即解引用 `configs`). 若你希望由 DSH 恢复"依赖缺失时仍可播放"的语义, 请给出裁决 ——
+  当前实现是"缺依赖则不播放", 与"实例池的配置依赖"直接相关.
+
+### 6. 音频冻结行为 (待实测)
+
+本项经两轮修订, 最终形态见 6b 的验收矩阵. 过程记录如下, 以免下次重新推导:
+
+- 初版(A12): `AudioClipData.FreezeLoop`(默认 `true`), 把"是否被保留"绑在 `Loop` 上. **该字段已不存在.**
+- 用户在 Play 模式实测后指出: "是否 Loop"与"是否能熬过冻结"是两个概念, 且后者又分两件事.
+- 因此重构为 `DefaultSurviveFreeze`(静态初值) + `WithSurviveFreeze` / `WithAllowWhileFrozen`(动态覆盖).
+
+唯一仍需实测的、我无法从 Unity 文档确认的一点: **冻结再解冻后, 被保留的音是否从原处继续**(而非从头或不响).
+官方文档只写明"恢复时从暂停处继续", 未写明暂停期间 `AudioSource.isPlaying` 的值.
+
+- [x] 解冻后确认被保留的音**从原处续播**. 若不响, 说明 `ignoreListenerPause` 与暂停状态冲突, 需改实现.
+
+### 7. GameState 子系统交付 (待复验)
+
+- [x] 编译已核实(与 Setting 同一次编译).
+- [x] **实测 `Freeze` 的幂等与还原**: 在玩法代码里调用 `GameStateManager.Freeze()`, 确认游戏时间停止, 音频暂停;
+  再调用一次 `Freeze()`, 确认只记一条"已处于 Freezed"的日志且**无其他副作用**.
+- [x] **实测时间缩放还原**: 先设 `Time.timeScale = 0.5f`, 再 `Freeze()` 然后 `Resume()`,
+  确认最终仍是 `0.5f`(而不是 `1f`). 这是"记忆而非写死"的关键验收 —— 若写成 `1f`, 慢动作玩法会在暂停一次后静默失效.
+- [x] **实测退出行为**: 在 `Freezed` 状态下退出播放模式, 确认下次进入播放模式时 `Time.timeScale` 已被 Unity 重置(不残留 0).
+  若确实残留, 需要按 `README.md` 的 `TODO` 增加退出钩子.
+
+### 8. 音频与 GameState 的相互作用 (交付 3 落地后必须验)
+
+`Time.timeScale = 0` 会让所有走 scaled time 的东西停摆, 因此音频侧已把 emitter 的结束判定改为 `UseUnscaledTime()`.
+这两处是一对, 不能只保留其一.
+
+- [x] 冻结期间播放一个一次性音效, 确认它仍会在播完后**归还池**(日志出现 `AudioEmitter is released`).
+  若没有, 说明 `UseUnscaledTime()` 未生效, emitter 会在暂停期间永久滞留池外.
 
 ## 历史
 

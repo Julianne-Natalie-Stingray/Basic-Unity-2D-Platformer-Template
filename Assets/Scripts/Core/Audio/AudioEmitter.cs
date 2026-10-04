@@ -64,6 +64,25 @@ public class AudioEmitter : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Whether this playback is kept while the game is frozen, by mapping onto the source's listener-pause
+    /// opt-out. A static initial may come from the clip, but the value is owned by whoever starts the playback,
+    /// because being kept is a per-request decision rather than a property of the clip.
+    /// 本次播放是否在游戏冻结时被保留: 通过映射到该音源的"无视监听器暂停"开关实现.
+    /// 静态初值可以来自 clip, 但该值归发起播放的一方所有, 因为"是否被保留"是一次请求的决定, 而不是 clip 的属性.
+    /// </summary>
+    public bool SurviveFreeze
+    {
+        get => surviveFreeze;
+        set
+        {
+            surviveFreeze = value;
+
+            InitializeInternal();
+            source.ignoreListenerPause = surviveFreeze;
+        }
+    }
+
     private AudioSource source;
     private AudioClipData data;
 
@@ -74,6 +93,7 @@ public class AudioEmitter : MonoBehaviour
     private float pitch = 1f;
     private bool isPlaying;
     private bool isFinished;
+    private bool surviveFreeze;
     private bool isVolumeDirty;
 
     private const float MinVolume = 0f;
@@ -150,6 +170,12 @@ public class AudioEmitter : MonoBehaviour
         source.spatialBlend = data.SpatialBlend;
         source.minDistance = data.MinDistance;
         source.maxDistance = data.MaxDistance;
+
+        // The clip supplies only the static initial; whoever starts the playback may override it. Setting it
+        // here as well keeps a freshly configured emitter consistent even before the override is applied.
+        // clip 只提供静态初值; 发起播放的一方可以覆盖它.
+        // 在此同时写入, 使刚配置好的 emitter 在覆盖生效之前也是自洽的.
+        SurviveFreeze = data.DefaultSurviveFreeze;
     }
 
     /// <summary>
@@ -208,6 +234,7 @@ public class AudioEmitter : MonoBehaviour
         _ = new Timer(Mathf.Infinity)
             .CompleteWhen(() => !source.isPlaying)
             .OnComplete(Stop)
+            .UseUnscaledTime()
             .Start();
     }
 
@@ -301,8 +328,10 @@ public class AudioEmitter : MonoBehaviour
 
         volume = 1f;
         pitch = 1f;
+        surviveFreeze = false;
         source.volume = volume;
         source.pitch = pitch;
+        source.ignoreListenerPause = false;
         isVolumeDirty = false;
     }
 

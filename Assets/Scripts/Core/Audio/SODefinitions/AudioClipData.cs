@@ -20,12 +20,19 @@ public class AudioClipData : ScriptableObject
     public float SpatialBlend => spatialBlend;
     public float MinDistance => minDistance;
     public float MaxDistance => maxDistance;
+    public bool DefaultSurviveFreeze => defaultSurviveFreeze;
 #endregion
     
     [SerializeField] private AudioId audioId;
     [SerializeField] private AudioClip clip;
     [SerializeField] private AudioMixerGroup mixerGroup;
     [SerializeField] private bool loop = false;
+    // Whether a clip is kept through a freeze is independent of whether it loops: a loop may be cut by a
+    // freeze, and a one-shot may be expected to survive one. Do not re-couple the two.
+    // 是否在冻结中被保留, 与是否循环是两件事: 循环音可以被冻结掐断, 一次性音也可能需要熬过冻结. 不要把两者重新绑在一起.
+    [SerializeField]
+    [Tooltip("Static initial for whether a playback of this clip survives entering Freezed. AudioBuilder.WithSurviveFreeze overrides it per call. Default false, which cuts the clip.")]
+    private bool defaultSurviveFreeze = false;
     [SerializeField] private int maxInstances = 10;
 
     [SerializeField, Range(0f, 1f)]
