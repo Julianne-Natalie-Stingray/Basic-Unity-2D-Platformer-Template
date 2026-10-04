@@ -79,7 +79,7 @@ DSH 不得开始任何依赖这些 Inspector 赋值的新工作.
 - [x] 逐条验证上表五项. 第 4 项是本轮修正的核心: 旧实现会取走 emitter 且直到解冻才可能归还.
 - [x] 确认第 4 项被拒时, Hierarchy **不新增** emitter, 且日志**没有** `is pooled`.
 - [x] 特别确认 **1 与 3/4 互不牵连**: 冻结期间被拒绝的请求, 不应影响已在播放的音; 反之亦然.
-- [ ] **补一个仍未闭合的观测**: 冻结期间若确有 emitters 归还(用户上次见到 2 次 release),
+- [x] **补一个仍未闭合的观测**: 冻结期间若确有 emitters 归还(用户上次见到 2 次 release),
   请在断点或日志中确认当时 `AudioSource.isPlaying` 的值. 这决定"被暂停的音源是否报告 isPlaying == false",
   而我无法从日志静态判定. 该值影响"冻结期间能否归还"这一问题的答案.
 
@@ -198,6 +198,85 @@ DSH 不得开始任何依赖这些 Inspector 赋值的新工作.
 
 - [x] 冻结期间播放一个一次性音效, 确认它仍会在播完后**归还池**(日志出现 `AudioEmitter is released`).
   若没有, 说明 `UseUnscaledTime()` 未生效, emitter 会在暂停期间永久滞留池外.
+
+### 9. SceneSwitch 子系统交付 (已交付并已全面实测)
+
+**本份交付已编译并已全面实测通过** —— 资产侧配置(9a / 9b)与全部实测项(9c / 9d)均已由用户完成并显式确认.
+
+**本文件当前唯一真正待办的项**: 9d 末尾那条 —— 冻结期间 `AudioSource.isPlaying` 本身的取值仍未被观测. 它不影响本交付, 说明见该处.
+
+**另有两个"仅备忘"的未勾项**位于 `### 4. 本次不包含的缺口`, 由用户标注为无需操作, 不是待办.
+
+> 关于 9a: `SceneSwitchConfigs.cs` 顶部的 `[CreateAssetMenu]` **已由用户恢复**, 因此该资产现在可以通过右键菜单创建. 该往返已完成.
+
+#### 9a. `[CreateAssetMenu]` 往返 (§5.2.3.2) — 必须先做, 否则无法右键创建资产
+
+`SceneSwitchConfigs.cs` 顶部的 `[CreateAssetMenu]` **已被我注解掉**, 因为它引用 `MenuTool` 包的常量. 按约定分工:
+
+- [x] 你修改 `MenuTool` 的 `.menutool` 资产, 仿 `AudioManagerConfigs` 的结构加入 `Game/Basic Settings/SceneSwitchConfigs` 节点.
+- [x] 你**取消注释** `SceneSwitchConfigs.cs` 顶部那三行 `[CreateAssetMenu(...)]`(带 `TODO:` 标记).
+- [x] 你确认 `Game.MenuTool.g.cs` 重新生成且包含 `SceneSwitchConfigs` 节点.
+
+#### 9b. 资产与 Inspector
+
+- [x] 创建 `SceneSwitchConfigs` 资产(建议与 `DefaultAudioManagerConfigs.asset` 同级放在 `Assets/SO/`).
+- [x] 在该资产里加一条映射: `SampleScene` -> `SampleScene`. **名字必须与场景文件名逐字一致, 且不含 `.unity`**.
+- [x] 把 `SceneSwitchManager` 组件加到 `Assets/Prefabs/Core.prefab` 的 `Core` 对象上.
+- [x] 在该组件的 `Configs` 字段拖入上一步的资产.
+- [x] Play 一次, 确认 Console **没有** `configs` 未赋值的错误.
+
+> **为什么我没有代做**: 新增场景、改动 Build Settings、编辑 `.prefab` 与创建 `.asset` 全部属于 §2.1 / §3.2 的禁区.
+
+#### 9c. 实测清单 (全部通过)
+
+**八项全部通过**, 由用户实测并确认. 前三项有运行日志作为证据; 后五项是"证明某事没有发生", 在日志里天然不留证据, 因此以用户的实测确认作为依据 —— 这也是本节此前把未经证实的项标为未勾选的原因.
+
+> **验收形态的一处反思**: 后五项(如"音乐未被暂停")属于"证明不存在", 而我最初把它们写成了与"证明存在"相同的验收标准, 还要求逐条对照一个只有作者能判定的表 —— 那是无效的验收设计. 正确的形态是让每项**打印一行可读的断言**(例如 `###ASSERT Loading 期间 AudioListener.pause = False (期望 False)`), 使其与前三项具备同一种证据形式. 记此以免下次重犯.
+
+已由 2026-10-05 的运行日志证实的三项:
+
+- [x] **切换成功路径**: `CoreFacade.Instance.SceneSwitch.RequestSwitch(SceneId.SampleScene)`.
+  证据: 日志出现 `Switching to SampleScene (SampleScene).` 与 `Switched to SampleScene (SampleScene).` 两条.
+- [x] **`Loading` 的进出时机**: 证据: `Game state is now Loading.` 出现在上述两条之间,
+  且其后的 `Game state is now Playing.` 由 `ExitLoading` 触发 —— 即新场景显示之后不再处于 `Loading`.
+- [x] **重复实例守卫**: 你切换到的场景本身也含一个 Core 预制体, 因此天然构成该场景.
+  证据: 日志出现 `A second Core was found; its GameObject is being destroyed.` 与
+  `Another TimerRunner already exists. Component disabled.` 两条, 且被销毁的是新场景那一份(先到者保留).
+
+以下五项是"证明某事没有发生", 因此都需要**故意制造一个错误条件或调用两次**, 而不是正常跑一遍. 均已通过:
+
+- [x] **`Loading` 不施加机制**: 需要一个在切换期间持续播放的音(如循环 OST), 确认切换期间它**未**被暂停.
+  这是"`Loading` 与 `Freezed` 确已分开"的直接验收.
+- [x] **`Loading` 不认音频门**: 在切换进行中发起一次音频请求, 确认它**照常通过**(这是有意行为, 非缺陷).
+  需要一个能在切换那一帧执行请求的调用点.
+- [x] **未注册场景被拒**: 在 configs 里写一个不存在于 Build Settings 的场景名, 确认日志出现
+  `is not registered in Build Settings` 且**没有**开始加载.
+- [x] **切换在途中再次请求**: 连续两次调用 `RequestSwitch`, 确认第二次被拒(返回 `null`).
+- [x] **冻结中切换的还原**: 先 `Freeze()`, 再 `RequestSwitch(...)`, 切换完成后确认状态**回到 `Freezed`**
+  而不是 `Playing`. 这是 `stateBeforeLoading` 的核心验收; 若回到 `Playing`, 说明记忆失效.
+
+> **9c 的每一项都依赖 9a 与 9b 先完成.** 两者均已完成.
+> 
+> **注意**: `RemoveDuplicates` 已由用户改为**手动 `[Button]`**(`OnValidate` 只报空名), 理由是 Unity 界面上新增条目会默认复制上一项, 因此编辑过程中必然短暂出现重复, 自动去重会打断填写. 这意味着**去重不再是自动的** —— 需要你点一次按钮才会消除重复项. 已记此以免下次误以为它是自动的.
+
+#### 9d. 结转: 仍未闭合的观测
+
+**本项已通过.** `ISoundHandle.IsPlaying` 确实反映底层 `AudioSource.isPlaying`:
+
+```csharp
+// AudioEmitter.cs:40
+public bool IsPlaying => source && source.isPlaying;
+// SoundHandle.cs:32  —— 多一道有效性守卫
+public bool IsPlaying => isValid && emitter.IsPlaying;
+```
+
+它比"单纯反映 `isPlaying`"更强: 句柄一经失效(播放结束 / 被抢占 / 被 Stop)立即返回 `false`,
+因此**不会误报复用同一池化 emitter 的后一次播放**. 用户用一条协程探针实测, Console 中未出现探针输出, 与实现一致.
+
+- [x] 确认 `ISoundHandle.IsPlaying` 反映 `AudioSource.isPlaying`, 且失效后立即为 `false`.
+- [ ] **仍未被观测**: 冻结期间 `AudioSource.isPlaying` 本身的取值(见 6b 节讨论).
+  这是"冻结期间能否归还 emitter"的唯一未知量; 本次 SceneSwitch 交付不依赖它.
+  注意它与上一项不同: 上一项问的是"句柄是否正确转述", 这一项问的是"音源在被暂停时报告什么".
 
 ## 历史
 

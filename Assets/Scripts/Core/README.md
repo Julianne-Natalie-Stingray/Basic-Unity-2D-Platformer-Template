@@ -5,17 +5,21 @@
 Core 是本工程共享运行时基础设施的单一入口.
 
 - 拥有共享服务门面, 其他 Subsystem 由它取得依赖.
-- 拥有输入处理, 音频播放与对象池.
+- 拥有输入处理, 音频播放, 场景切换与对象池.
 - 不负责游戏规则, 玩法状态, 以及任何场景专属行为.
 - 不负责生成的输入绑定资产; 那些位于 `Assets/Infra/InputSystem/` 下.
+- 不负责"接下来该去哪个场景"; 那是调用方的决定, 以参数传入.
 
 ## 构成
 
 | 路径 | 类型 | 职责 |
 | --- | --- | --- |
-| `CoreFacade.cs` | `GameCore` 上的 MonoBehaviour | 单一入口; 暴露 `Input` 与 `Audio`; 负责 `DontDestroyOnLoad` |
+| `CoreFacade.cs` | Core 预制体上的 MonoBehaviour | 单一入口; 暴露 `Input` / `Audio` / `SceneSwitch`; 提供跨场景访问点 `Instance`; 负责 `DontDestroyOnLoad` 与重复实例守卫 |
 | `Managers/InputManager.cs` | MonoBehaviour | 输入服务; 只发布设备层, 并提供整套生成输入集合的入口 |
 | `Managers/AudioManager.cs` | MonoBehaviour | 音频总线; 拥有 emitter 池, 注册表与两级实例上限 |
+| `SceneSwitch/SceneSwitchManager.cs` | MonoBehaviour | 场景切换总线; 唯一的切换入口, 拥有 `Loading` 状态 |
+| `SceneSwitch/SceneId.cs` | enum | 可切换场景的键; 编译期防打错 |
+| `SceneSwitch/SceneSwitchConfigs.cs` | ScriptableObject | 白名单: `SceneId` -> 场景名 |
 | `Audio/AudioBuilder.cs` | struct | 单次播放请求的链式配置凭证, 承载实时效果参数与位置 |
 | `Audio/ISoundHandle.cs` | 接口 | 单次播放的作用域契约 |
 | `Audio/SoundHandle.cs` | class | `ISoundHandle` 的唯一实现 |
@@ -31,17 +35,70 @@ Core 是本工程共享运行时基础设施的单一入口.
 - `CoreFacade.Input` -> `InputManager`: 输入服务.
 - `CoreFacade.Audio` -> `AudioManager`: 音频总线. 启动声音的唯一入口是
   `CoreFacade.Audio.CreateBuilder().With...().Play(audioId)`, 返回 `ISoundHandle`; 请求被拒绝时返回 `null`.
+- `CoreFacade.SceneSwitch` -> `SceneSwitchManager`: 场景切换总线. 唯一的切换入口是
+  `CoreFacade.SceneSwitch.RequestSwitch(sceneId)`, 返回 `AsyncOperation`; 请求被拒绝时返回 `null`.
+- `CoreFacade.Instance` -> `CoreFacade`: **唯一**能熬过场景切换的访问点. 新场景中的代码用它取回 Core.
+- `SceneSwitchManager.IsSwitching`: 是否有一次切换在途. 调用方可以查, 但 `RequestSwitch` 无论如何都会强制该约束.
 - `AudioBuilder` 的链式项: `WithVolume` / `WithPitch` / `WithRandomPitch` / `WithPosition` / `WithFollowTarget` /
   `WithSurviveFreeze` / `WithAllowWhileFrozen`.
 - `AudioManager.Registry` -> `AudioRegistry`: 只读的事实查询, 供需要知道"现在在播什么"的代码使用.
-- `InputManager` 与 `AudioManager` 是 `CoreFacade` 的必需组件, 由 `InitializeInternal()` 通过 `GetComponent<>()` 解析.
-- `AudioClipData` 与 `AudioManagerConfigs` 是数据定义; `AudioId` 是 clip 查找键.
+- `InputManager`, `AudioManager` 与 `SceneSwitchManager` 是 `CoreFacade` 的必需组件, 由 `InitializeInternal()` 通过 `GetComponent<>()` 解析.
+- `AudioClipData` 与 `AudioManagerConfigs` 是数据定义; `AudioId` 是 clip 查找键. `SceneSwitchConfigs` 是场景白名单.
 
 ## 内部实现思路
 
 - 初始化在 `Awake()` 中完成; Subsystem 内部依赖由 `InitializeInternal()` 通过 `GetComponent<>()` 加缓存解决, 不需要 Inspector 接线.
 - 管理器引用缓存在私有字段中, 以只读 Property 暴露.
-- 需要跨场景存活的数据持久化为 ScriptableObject, 而不是场景内序列化字段.
+- **Configs** 指**内部参数**, 由开发者维护, 放在工程内的 ScriptableObject, 初始化**之后**读取.
+- **Settings** 专指**游戏内玩家可调设置**, 由 `SettingStore<TData>` 承载, 初始化**之前**可用.
+- **不使用 `Config` 这个中间词.** 它介于两者之间, 只会制造歧义; 命名时必须在上面两者中二选一.
+- 跨场景存活的东西只有一处: `CoreFacade` 及其挂载的 Core 对象. 其余一切随场景销毁并重建.
+
+### 场景切换与跨场景访问
+
+这是本 Subsystem 里**唯一**需要打破"少用单例范式"的地方, 因此把理由写明.
+
+**为什么必须有 `CoreFacade.Instance`**: 场景切换会销毁**所有**场景内引用. 切换前, 场景里的对象可以靠 Inspector 拖拽拿到 `CoreFacade`; 切换后那个引用指向的实例早已随旧场景销毁, 于是它变成悬空引用(Unity 会把它置空). 因此**某个不属于任何场景的东西必须能在没有场景的情况下被访问到**. 这是硬约束, 不是偏好.
+
+**为什么不用其他形态**:
+
+| 形态 | 为何否决 |
+| --- | --- |
+| 每个新场景在 Inspector 里重新拖拽引用 | 漏接时表现为运行时 null 而不是编译错误; 且每个场景都要重复手工接线 |
+| 服务定位器(按类型取) | 为**恰好一个**消费者引入一张注册表 |
+| 静态门面(静态类内部持有实例) | 仍然要持有实例, 只是把单例藏起来, 并没有消除它 |
+
+**重复实例守卫**: Core 是 Core 预制体的实例, 而预制体可能被放进多个场景. 因此 `CoreFacade.Awake` 在发现已有实例时**销毁自己的 GameObject** 并记一条 warning. 先到者保留, 后到者退出 —— 因为只有第一个才是游戏其余部分据以解析的那个访问点.
+
+**新场景如何与 Core 重新连接**: 依赖方向是**单向**的, 即"场景内容 -> Core", 禁止反向. 因此不需要任何"重连机制": 场景内的组件在**自己的 `Awake`** 里通过 `CoreFacade.Instance` 取回依赖即可. Unity 已在场景加载时替你把该场景的所有 `Awake` 调完.
+
+- 必须遵守一条硬约束: **场景内容不得在 `Awake` 之前的时机(如字段初始化器、`OnEnable` 早于其它组件的场合)访问 `CoreFacade.Instance`**, 因为那时持久 Core 可能尚未建立.
+- 禁止反向: `CoreFacade` 与各管理器**不得**认识场景里的具体类型. 一旦反向, 每加一个场景子系统都要改 Core, 那正是"初始化与生命周期问题"的根源.
+
+### 场景切换的实现要点
+
+**场景架构**: Core 与内容**同处一个场景**, 靠 `DontDestroyOnLoad` 续命, 切换用 `LoadSceneMode.Single`. 已否决"Core 独占常驻场景 + 加法加载"的方案, 理由是**单场景无法直接播放**: 那样每个内容场景里都没有 Core, 测试单个场景时必须先播 Bootstrap 场景, 或手动把 Core 加回去 —— 而"测试时的手工接线"正是要消灭的成本.
+
+**激活时机**: 加载会先被 `allowSceneActivation = false` 压住, 等 `progress >= 0.9` 后再放行, 随后立刻退出 `Loading`. Unity 的 `progress` 在 0.9 处停住, 因此必须显式放行, 否则加载永不完成.
+
+**为什么加载 0.9 才放行而不是更早**: 一旦放行, 新场景就会激活并显示. `Loading` 要精确覆盖"旧场景还在屏幕上、或新场景尚未出现"的那一段, 所以放行与退出 `Loading` 必须相邻, 中间不留空档.
+
+**为什么切换目标是参数而不是字段**: "接下来去哪个场景"是玩法决定(打完关卡 -> 下一关), 不是总线配置. 若把 `NextScene` 放在管理器上, 它就成了第二个真相来源, 且每次测试换场景都要改 Inspector.
+
+**校验顺序**(四道, 全部通过才加载):
+
+| # | 检查 | 失败时 |
+| --- | --- | --- |
+| 1 | `configs` 已赋值 | 组件已在 `Awake` 中自禁 |
+| 2 | 当前无切换在途 | 记日志并返回 `null` |
+| 3 | `SceneId` 在白名单中有映射 | 记错误并返回 `null` |
+| 4 | 映射到的场景已在 Build Settings 注册 | 记错误并返回 `null` |
+
+第 4 道用的是 `SceneUtility.GetBuildIndexByScenePath`, 它把"忘了把场景加进 Build Settings"变成一条**明确日志**, 而不是引擎层的异常或静默停在当前场景.
+
+**同一场景再次请求也走同一条拒绝路径**: 没有单独的"是否已在目标场景"判断, 因为那会引入一个需要维持的额外状态, 而重复加载同一场景本就是调用方的意图问题, 应当被日志暴露.
+
+**已否决**: 取消一次进行中的 `LoadSceneAsync`(它没有 Cancel, 只能标记忽略, 于是留下一个仍在加载的场景); 排队下一次切换(顺序自动切两个场景几乎总是发起方的 bug).
 - `CoreFacade` 是唯一调用 `DontDestroyOnLoad` 的类型; 各管理器自身不调用.
 - 跨组件协调的初始化放在 `Start`, 不放 `Awake`: `Awake` 只解析自身依赖, 凡是需要"另一个组件已完成初始化"的判断都等到 `Start`.
 - 唯一的例外是音频的**建池**: 它放在 `InitializeInternal` 而非 `Start`, 因为其他组件的 `Start` 里就可能有播放请求, 而那时池必须已经存在. 只有**预热**放在 `Start`, 因为实例化可以推迟.

@@ -1,5 +1,168 @@
 # CHANGELOG
 
+## 2026-10-05 — 交付: SceneSwitch 子系统 (切换入口 + Loading 状态 + 跨场景访问点)
+
+### 共识 (grill 结论)
+
+经四轮拷问定下的六条, 以及它们各自否决了什么:
+
+| # | 决策 | 否决项与理由 |
+| --- | --- | --- |
+| 1 | 职责**仅入口**: 校验 + 启动一次异步加载, 返回 `AsyncOperation` | 否决自定义 `ISceneSwitchHandle`: `AsyncOperation` 就是 Unity 为这件事提供的句柄, 再包一层不增加表达力 |
+| 2 | 新增 `Loading` 状态, 由 `SceneSwitchManager` 驱动 | 否决复用 `Freezed`: 那会把 `Time.timeScale = 0` 与音频暂停一起锁死在"加载"上 |
+| 3 | 目标场景用 `SceneId` 枚举 + `SceneSwitchConfigs` 白名单校验 | 否决纯字符串: Unity 对不存在的场景名抛异常或静默停在当前场景, 与 GameLog 体系相悖 |
+| 4 | `CoreFacade` 成为单例, 提供静态 `Instance` | 这是对 §5.2.1"少用单例"的**唯一一次刻意破例**, 理由见下 |
+| 5 | 依赖方向为**拉**: 场景内容在自己的 `Awake` 里取回 Core | 否决**推**(Core 主动查找场景类型): 那样每加一个场景子系统都要改 Core |
+| 6 | 运行时**确实**会多次切换场景 | 若答"只在启动时加载一次", 则本子系统整个不该存在 |
+
+### 场景架构: 为什么 Core 与内容同场景
+
+选定"Core 留在内容场景内 + `DontDestroyOnLoad` + `LoadSceneMode.Single`", 否决了"Core 独占常驻场景 + 加法加载".
+
+**决定性理由是用户的测试成本**: 在加法方案下每个内容场景里都没有 Core, 因此单独播放某个内容场景时它不工作 —— 要么先播 Bootstrap 场景(于是测不了单场景), 要么手动把 Core 加回去, 而"测试时的手工接线"正是本次要消灭的成本. 单人开发的模版里, 这个成本高于"场景图结构性排除两个 Core"的收益.
+
+代价: 需要重复实例守卫, 而它是单例标配, 约 6 行.
+
+### 新增
+
+- `SceneId`: 可切换场景的键. 初版**只含 `SampleScene`**, 因为它是工程里唯一存在的场景 —— 先加键会引用一个尚不存在的场景, 从而破坏编译边界.
+- `SceneSwitchConfigs`: `SceneId` -> 场景名的白名单, 含 `OnValidate` 的重复项清除与空名检查(§5.2.2.5).
+- `SceneSwitchManager`: 唯一切换入口. `RequestSwitch` 过四道校验(白名单已赋值 / 无切换在途 / 键有映射 / 场景已注册 Build Settings), 全过才加载.
+- `CoreFacade.Instance`: 跨场景访问点.
+- `CoreFacade.SceneSwitch`: 暴露切换总线.
+- `GameState.Loading` 与 `GameStateManager.EnterLoading` / `ExitLoading`.
+
+### 关键实现决策与理由
+
+**`Loading` 不施加任何机制.** 不设 `Time.timeScale`, 不暂停音频. 理由与音频侧把 `SurviveFreeze` 从 `Loop` 上剥离是同一判据: `Freezed`(游玩被挂起)与 `Loading`(正在换成另一个场景)是两件不同的事, 合并会得到一个无法表达"只想要其中一个"的模型.
+
+**由此产生的必然后果**: 音频的冻结入口门**不认** `Loading`, 加载期间所有音频请求照常通过. 这是有意为之而非遗漏 —— 让 `Loading` 悄悄变成第二个 `Freezed` 才是错误.
+
+**`Loading` 记忆并还原前一个状态**(`stateBeforeLoading`), 而不是假定回到 `Playing`. 否则"在冻结中触发了一次切换"会**静默解冻**, 属于"不报错但行为错了"的缺陷. 与 `Freeze` 的记忆时间缩放同构.
+
+**激活被显式推迟**: `allowSceneActivation = false`, 等 `progress >= 0.9` 再放行, 放行后**立刻**退出 `Loading`. Unity 的 `progress` 在 0.9 处停住, 不放行则加载永不完成; 而放行与退出必须相邻, 中间不留"既无 Loading 也未激活"的空档.
+
+**切换目标是参数, 不是字段.** "接下来去哪个场景"是玩法决定(打完关卡 -> 下一关), 不是总线配置; 若放成 `NextScene` 字段, 它就成了第二个真相来源, 且每次测试换场景都要改 Inspector.
+
+**同一场景再次请求也走同一条拒绝路径** —— 不引入"是否已在目标场景"的额外状态.
+
+**已否决**: 取消进行中的 `LoadSceneAsync`(它没有 Cancel, 只能标记忽略, 于是留下一个仍在加载的场景); 排队下一次切换(顺序自动切两个场景几乎总是发起方的 bug); 为 `Loading` 单独加音频入口门(会把 `Loading` 变成第二种 `Freezed`).
+
+### 为什么这里必须破例使用单例
+
+场景切换会销毁**所有**场景内引用. 切换前场景对象可以靠 Inspector 拿到 `CoreFacade`, 切换后那个引用指向的实例早已随旧场景销毁 —— 它变成悬空引用. 因此"某个不属于任何场景的东西必须能在没有场景的情况下被访问到"是**硬约束**, 不是偏好.
+
+已否决的其他形态: 每个新场景重新拖拽引用(漏接表现为运行时 null 而非编译错误); 服务定位器(为恰好一个消费者引入注册表); 静态门面(仍要持有实例, 只是把单例藏起来).
+
+### 顺带修正的文档与代码不符
+
+`GameStateManager` 的类注解此前声称"由 Unity 通过 `RuntimeInitializeOnLoadMethod` 在第一个场景加载之前建立", 但**该文件里没有这个属性**. 它靠 `Current` 的默认值 `Playing` 恰好正确, 而非有意的初始化. 注解已改为如实描述.
+
+同时清理了两处过期陈述: `GameState/README.md` 称"目前没有任何订阅者"(音频已是订阅者); 其"退出时 timeScale 残留"的 TODO 经用户确认可移除, 已删除并记录理由.
+
+### 一处我自己犯的错, 记录以免重犯
+
+`SceneSwitchManager` 首次编译失败:
+
+```
+SceneSwitchManager.cs(51,22): error CS0246: The type or namespace name 'ExpandableAttribute' could not be found
+```
+
+`[Expandable]` 属于 NaughtyAttributes, 而我漏了 `using NaughtyAttributes;`. 这已是**同一个 API 家族上的第四次**同类失误(`BoxGroup` 是第一次). 另外, 我在写 `CoreFacade` 时还**推断**出一个 `LogAction.DestroyGameObject`, 而它不存在 —— 我随后提取 GameLog DLL 的元数据字符串核对了真实成员(`Abort` / `ClampValue` / `DisableComponent` / `DisableGameObject` / `Ignore` / `RemoveInvalid` / `Return` / `UseFallback`)并改为 `Ignore`.
+
+两次都说明同一件事: **本工程依赖三个自研包(GameLog / MenuTool / Timer), 它们的 API 不能靠推断, 必须查实**.
+
+### 验证
+
+- 编译通过: `Assembly-CSharp.dll` @ `03:39:39`, 体积 `67584` -> `70144` 字节, Bee 的 `noderesult` 为 `exitcode: 0`.
+- 逐项核对入产物: `SceneSwitchManager` / `SceneSwitchConfigs` / `SceneId` / `RequestSwitch` / `IsSwitching` / `TryGetSceneName` / `RunSwitch` / `get_Instance` / `get_SceneSwitch` / `Loading` / `EnterLoading` / `ExitLoading` 全部存在.
+- **已 Play 模式实测**: 见下方"实测结果". 八项全部通过.
+
+### 实测结果 (2026-10-05, 用户运行)
+
+**已实测通过三项**, 证据全部来自运行日志:
+
+| 项 | 证据 |
+| --- | --- |
+| 切换成功路径 | `Switching to SampleScene (SampleScene).` 与 `Switched to SampleScene (SampleScene).` 两条均出现 |
+| `Loading` 进出时机 | `Game state is now Loading.` 在两条之间; 其后的 `Game state is now Playing.` 由 `ExitLoading` 触发 |
+| 重复实例守卫 | `A second Core was found; its GameObject is being destroyed.` + `Another TimerRunner already exists. Component disabled.` |
+
+**八项全部通过**. 其中后五项是"证明某事**没有**发生"(音乐未被暂停、请求未被拒绝、加载未开始、第二次未返回句柄、状态未变成 `Playing`), 这类性质在日志里**天然不留证据**, 因此以用户的实测确认为依据. 清单见 `PENDING_INSPECTOR.md` 9c.
+
+> **一处验收形态的反思**: 我最初把这五项写成了与"证明存在"相同的验收标准, 还要求逐条对照一个只有作者能判定的表. 那是**无效的验收设计** —— 一个只有作者能判定的验收标准, 对使用者不可读. 正确形态是让每项打印一行可读断言(如 `###ASSERT Loading 期间 AudioListener.pause = False (期望 False)`), 使其与前三项具备同一种证据形式. 记此以免重犯.
+
+**过程中的一次状态更正, 值得记录**: 用户第一次勾选本节时, 五项尚无测试证据. 我依据 §5.1.3 把它们**改回未勾选**, 并说明原因 —— 让一次没做过的验证看起来做过, 比留一个未勾选项危险得多. 用户随后完成实测并再次确认, 此时才全部勾上. 即: **勾选状态最终由实测确认驱动, 而非由"代码写完了"驱动**.
+
+### 这轮实测暴露并修掉的两个真实缺陷 (在测试脚本侧)
+
+用户的测试脚本连续撞到同一条规律的两种形态, 二者都源于**切换会销毁场景内对象, 而 Timer 跑在持久的 `TimerRunner` 上**:
+
+1. `NullReferenceException`: 序列化字段 `public CoreFacade core` 随旧场景置空, 而 Timer 回调仍在读它. 修法: 在 `Test()` 开头解析一次 `CoreFacade.Instance` 到局部变量.
+2. `MissingReferenceException: The object of type 'DebugScript' has been destroyed ... StartCoroutine`: 回调里的 `StartCoroutine` 把**宿主**绑回了场景内的 `DebugScript`. 修法: 宿主改为持久的 Core.
+
+规律: **Timer 的回调里不能出现任何场景内的东西 —— 既不能是引用, 也不能是宿主.** 这是本子系统引入的固有后果.
+
+### 一处我对用户提议的否决, 以及由此发现的真实缺陷
+
+用户提议把 Timer 的 `callback.Invoke()` 改为 `callback?.Invoke()`. **我不同意并给出证据**: `?.` 只检查委托引用是否为 null, 而"已销毁的 MonoBehaviour"**不是 null 委托** —— `Invoke()` 会正常进入方法体, 在访问 `this` 时抛 `MissingReferenceException`. 日志本身即证明: 栈中出现 `StartCoroutine` 帧, 说明 `Invoke()` 确实被调用过. 且 `At()` 已在入口处拒绝 null 回调, 该列表不可能含 null. 故该改动无效且冗余.
+
+但由此发现了一个**真实缺陷**: 一个回调抛异常会顺着 `ProcessTimeStamps` 传进 `Run()` 协程, **把整个 Timer 连同所有未触发的回调一起杀掉**, 且 `IsRunning` 永远停在 `true`. 用户日志中 `5s` 的 `Freeze` 与 `7s` / `8s` 的回调确实全部未执行. 建议的加固(由用户裁决, 因涉及其自有包): 在 `ProcessTimeStamps` 中逐个回调 `try/catch` 记日志并继续, 并在 `Run()` 用 `finally` 保证状态归位. 代价是异常从"崩溃"变为"一条日志".
+
+### 用户的两处自主改动 (我同意, 理由成立)
+
+- `DebugScript.Test()` 的测试链被删除. 理由: 切到**当前所在场景**是人为构造的边界, 不是实际用法. 该删除不撤销上述三项已验证的证据.
+- `SceneSwitchConfigs.RemoveDuplicates` 由 `OnValidate` 自动调用改为**手动 `[Button]`**, `OnValidate` 只报告空名. 理由: Unity 界面上新增条目会默认复制上一项, 因此编辑过程中必然短暂出现重复, 自动去重会在填写完成前删掉它. 这与既有的 `AudioManagerConfigs` 完全同构. **副作用**: 去重不再是自动的, 需要手动点一次按钮.
+
+### 我在本轮犯的一个错误, 记录以免重犯
+
+我读用户的 `SceneSwitchConfigs.cs` 时**截断了文件头**(只看到前两行就判定缺少 `using NaughtyAttributes;`), 基于该错误印象去"修"它, 结果把 `using UnityEngine;` 与 `/// <summary>` **合并到了同一行**.
+
+**关键在于: 合并后编译仍然通过** (`exitcode: 0`). 受损的是格式, 不是语法. 是逐行打印才发现该行被拼接.
+
+教训: **编译绿不等于文件完好**; 编辑他人刚改过的文件之前必须完整读取而非抽样, 且 `write` / `edit` 之后要回读**被改动的那几行**确认形状.
+
+### 需要你手动完成的操作
+
+#### A. Inspector / 资产 (本次交付的落地)
+
+- [ ] 在 `Assets/Scripts/Core/` 下**新建目录** `SceneSwitch` 已由 DSH 创建, 无需操作(此条仅备忘).
+- [ ] 创建 `SceneSwitchConfigs` 资产并命名(建议放在 `Assets/SO/` 下, 与 `DefaultAudioManagerConfigs.asset` 同级).
+- [ ] 在该资产里加一条映射: `SampleScene` -> `SampleScene`(名字必须与场景文件名逐字一致, **不含** `.unity`).
+- [ ] 把 `SceneSwitchManager` 组件加到 `Assets/Prefabs/Core.prefab` 的 `Core` 对象上.
+- [ ] 在该组件的 `Configs` 字段里拖入上一步创建的资产. **未赋值时组件会在 `Awake` 自行禁用并记一条错误**.
+- [ ] 确认 `ProjectSettings/EditorBuildSettings.asset` 里 `SampleScene` 仍为启用状态(它已在列).
+- [ ] Play 一次, 确认 Console 无 `configs` 未赋值的错误.
+- [ ] 实测: 在任意脚本里调用 `CoreFacade.Instance.SceneSwitch.RequestSwitch(SceneId.SampleScene)`, 确认日志出现"Switching to"与"Switched to"两条, 且 `Loading` 在其中间.
+
+#### B. `.menutool` 往返 (§5.2.3.2) — 需要你的操作
+
+`SceneSwitchConfigs` 的 `[CreateAssetMenu]` 属性**已被我注解掉**, 因为它依赖 `MenuTool` 包. 按约定分工:
+
+- [ ] 你修改 `MenuTool` 的 `.menutool` 资产, 加入 `Game/Basic Settings/SceneSwitchConfigs` 节点(仿 `AudioManagerConfigs` 的结构).
+- [ ] 你**取消注释** `SceneSwitchConfigs.cs` 里那三行被注释掉的 `[CreateAssetMenu]` 属性(文件顶部, 带 `TODO:` 标记).
+- [ ] 你确认 `Game.MenuTool.g.cs` 已重新生成并包含 `SceneSwitchConfigs` 节点.
+
+**注意**: 在此之前, 该资产**无法通过右键菜单创建**. 若你希望先创建资产, 可临时手动 `Create > ScriptableObject` 或先完成 B.
+
+#### C. 本次新增的文件与待生成的 `.meta` (§2.1.1)
+
+以下三个 `.cs` 已由 DSH 创建, `.meta` 已由 Unity 生成(DSH 未触碰 `GUID`). **提交时必须与 `.cs` 一起提交**:
+
+- [ ] `Assets/Scripts/Core/SceneSwitch.meta` (目录)
+- [ ] `Assets/Scripts/Core/SceneSwitch/SceneId.cs` + `SceneId.cs.meta`
+- [ ] `Assets/Scripts/Core/SceneSwitch/SceneSwitchConfigs.cs` + `SceneSwitchConfigs.cs.meta`
+- [ ] `Assets/Scripts/Core/SceneSwitch/SceneSwitchManager.cs` + `SceneSwitchManager.cs.meta`
+
+另有一个**孤儿 `.meta` 待 Unity 删除**(DSH 删除了临时诊断探针 `Assets/Scripts/DshSceneSwitchProbe.cs`, 其 `.meta` 按 §2.1.1 由 Unity 清除, DSH 不得代为删除):
+
+- [ ] 确认 `Assets/Scripts/DshSceneSwitchProbe.cs.meta` 已被 Unity 删除.
+
+#### D. 结转自上一份交付且仍未闭合的项
+
+- [ ] 冻结期间 `AudioSource.isPlaying` 的值仍未观测(见 `PENDING_INSPECTOR.md` 第 6b 节末项). 本次切换交付**不依赖**该观测.
+---
+
 ## 2026-10-04 — 修正: 冻结期入口门必须同时看到 SurviveFreeze
 
 ### 触发 (用户的 Play 模式验收)

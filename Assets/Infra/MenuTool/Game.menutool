@@ -20,6 +20,12 @@
           "label": "AudioClip Data",
           "fileName": "GenericAudioClipData",
           "children": []
+        },
+        {
+          "identifier": "SceneSwitchConfigs",
+          "label": "Scene Switch Configs",
+          "fileName": "DefaultSceneSwitchConfigs",
+          "children": []
         }
       ]
     }

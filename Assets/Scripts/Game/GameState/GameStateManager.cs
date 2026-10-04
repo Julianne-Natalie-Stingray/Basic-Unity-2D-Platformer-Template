@@ -5,7 +5,8 @@ using UnityEngine;
 /// Owner of the global game state, and the only thing that may change it combined with its consequences.
 /// Subsystem: GameState.
 /// Where it lives: nowhere. It is a static class, so it has no GameObject and cannot be found in the
-/// Hierarchy; it is established by Unity through RuntimeInitializeOnLoadMethod before the first scene loads.
+/// Hierarchy, and it needs no bootstrap: Current starts as Playing, which is the correct value for a session
+/// that has not frozen or started loading anything.
 /// Responsibility: hold Current, accept Freeze and Resume requests, and apply the two mechanisms a state
 /// change implies -- game time and listener pause. Raising Changed is the whole of its outward signal, so
 /// components decide for themselves what a state means to them.
@@ -20,8 +21,8 @@ using UnityEngine;
 /// first scene object awakes, and a Component would need a hand-placed object to guarantee that.
 /// 全局游戏状态的拥有者, 也是唯一可以改变它并同时施加其后果的地方.
 /// Subsystem 归属: GameState.
-/// 存在位置: 无. 它是静态类, 因此没有 GameObject, 也无法在 Hierarchy 中找到;
-/// 由 Unity 通过 RuntimeInitializeOnLoadMethod 在第一个场景加载之前建立.
+/// 存在位置: 无. 它是静态类, 因此没有 GameObject, 也无法在 Hierarchy 中找到; 它也不需要自举:
+/// Current 初始即 Playing, 而这正是一个尚未冻结、也未开始加载任何东西的会话所应处的值.
 /// 职能: 持有 Current, 接受 Freeze 与 Resume 请求, 并施加状态变化所隐含的两个机制 —— 游戏时间与监听器暂停.
 /// 触发 Changed 是它对外的全部信号, 因此组件自行决定某个状态对它们意味着什么.
 /// 不负责: 哪个组件应当响应, 响应应当是什么, 或除时间与音频监听器之外还有哪些系统受影响.
@@ -49,6 +50,7 @@ public static class GameStateManager
     public static event Action<GameState> Changed;
 
     private static float timeScaleBeforeFreeze = 1f;
+    private static GameState stateBeforeLoading = GameState.Playing;
 
     /// <summary>
     /// Single entry point for suspending play.
@@ -106,6 +108,44 @@ public static class GameStateManager
         AudioListener.pause = false;
 
         Apply(GameState.Playing);
+    }
+
+    /// <summary>
+    /// Single entry point for declaring that a scene switch has begun.
+    /// Implementation approach: records whatever state was in force first, so the state can be restored rather
+    /// than assumed. It applies no mechanism: a load is a transition, not a suspension, so game time and audio
+    /// are left alone. Entering it twice is a no-op, which keeps a second record from overwriting the first and
+    /// silently losing what the game was doing before the first load started.
+    /// 宣布场景切换已开始的单一入口.
+    /// 实现思路: 先记录当时生效的状态, 以便之后**还原**而不是假定. 它不施加任何机制:
+    /// 加载是一次过渡而非一次挂起, 因此游戏时间与音频都不动. 重复进入是空操作,
+    /// 这防止第二次记录覆盖第一次, 从而静默丢失第一次加载开始前游戏在做什么.
+    /// </summary>
+    public static void EnterLoading()
+    {
+        if (Current == GameState.Loading)
+            return;
+
+        stateBeforeLoading = Current;
+
+        Apply(GameState.Loading);
+    }
+
+    /// <summary>
+    /// Single entry point for declaring that a scene switch has finished.
+    /// Implementation approach: restores the state recorded by EnterLoading instead of assuming Playing, because
+    /// a switch may have been requested while the game was frozen; forcing Playing would silently unfreeze a
+    /// game that nobody asked to unfreeze. It is a no-op when no switch is in flight.
+    /// 宣布场景切换已结束的单一入口.
+    /// 实现思路: 还原 EnterLoading 记录的状态, 而不是假定 Playing, 因为切换可能在游戏已冻结时被请求;
+    /// 强制回到 Playing 会静默解冻一个没人要求解冻的游戏. 当前没有切换在进行时, 它是空操作.
+    /// </summary>
+    public static void ExitLoading()
+    {
+        if (Current != GameState.Loading)
+            return;
+
+        Apply(stateBeforeLoading);
     }
 
     /// <summary>

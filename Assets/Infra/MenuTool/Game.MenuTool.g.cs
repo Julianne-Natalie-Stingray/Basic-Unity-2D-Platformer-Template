@@ -28,6 +28,13 @@ public static partial class MenuTool
                 public const string FileName = "GenericAudioClipData";
                 public const string Path = "Game/Basic Settings/AudioClip Data";
             }
+
+            public static partial class SceneSwitchConfigs
+            {
+                public const string Label = "Scene Switch Configs";
+                public const string FileName = "DefaultSceneSwitchConfigs";
+                public const string Path = "Game/Basic Settings/Scene Switch Configs";
+            }
         }
     }
 }
