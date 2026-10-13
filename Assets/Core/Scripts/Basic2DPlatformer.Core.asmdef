@@ -1,0 +1,20 @@
+{
+    "name": "Basic2DPlatformer.Core",
+    "rootNamespace": "",
+    "references": [
+        "Basic2DPlatformer.Infra",
+        "Basic2DPlatformer.Game",
+        "Unity.InputSystem",
+        "NaughtyAttributes.Core",
+        "GrignardReagent.Timer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

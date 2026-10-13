@@ -1,0 +1,17 @@
+{
+    "name": "Basic2DPlatformer.Player",
+    "rootNamespace": "",
+    "references": [
+        "Basic2DPlatformer.Core",
+        "Basic2DPlatformer.Character"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

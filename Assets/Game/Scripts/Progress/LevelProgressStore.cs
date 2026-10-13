@@ -1,0 +1,29 @@
+/// <summary>
+/// 本次运行内的顺序通关进度, 不读取或写入存档.
+/// 归属: Game (Progress).
+/// </summary>
+public sealed class LevelProgressStore
+{
+    /// <summary>模版当前只有一关(SampleLevel); 增加关卡时同步扩展此值.</summary>
+    public const int LevelCount = 1;
+
+    public int CompletedLevels { get; private set; }
+
+    /// <summary>第 1 关始终解锁; 第 N 关需第 N-1 关已通关.</summary>
+    public bool IsUnlocked(int levelNumber)
+    {
+        return levelNumber >= 1 && levelNumber <= LevelCount && levelNumber <= CompletedLevels + 1;
+    }
+
+    /// <summary>只接受已解锁关卡; 重玩不会倒退或越级解锁.</summary>
+    public bool CompleteLevel(int levelNumber)
+    {
+        if (!IsUnlocked(levelNumber))
+            return false;
+
+        if (levelNumber > CompletedLevels)
+            CompletedLevels = levelNumber;
+
+        return true;
+    }
+}

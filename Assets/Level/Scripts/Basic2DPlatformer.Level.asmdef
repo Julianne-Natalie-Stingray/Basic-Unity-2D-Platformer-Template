@@ -1,0 +1,17 @@
+{
+    "name": "Basic2DPlatformer.Level",
+    "rootNamespace": "",
+    "references": [
+        "Basic2DPlatformer.Game",
+        "Basic2DPlatformer.Character"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

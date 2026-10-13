@@ -1,0 +1,21 @@
+{
+    "name": "Basic2DPlatformer.Editor",
+    "rootNamespace": "",
+    "references": [
+        "Basic2DPlatformer.Infra",
+        "Basic2DPlatformer.Core",
+        "Basic2DPlatformer.Game",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,2 +1,10 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Unity Smart Merge: let UnityYAMLMerge resolve Unity YAML assets instead of line-based merge.
+# Requires the merge driver to be configured per machine — run Tools/setup-git.ps1 (Windows) or Tools/setup-git.sh.
+*.unity        merge=unityyamlmerge
+*.prefab       merge=unityyamlmerge
+*.asset        merge=unityyamlmerge
+*.controller   merge=unityyamlmerge
+*.meta         merge=unityyamlmerge

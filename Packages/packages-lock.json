@@ -1,16 +1,28 @@
 {
   "dependencies": {
-    "ayellowpaper.serialized-dictionary": {
-      "version": "file:F:/Games/Game Assets Collection/Unity Assets/SerializedDictionary",
+    "com.coplaydev.unity-mcp": {
+      "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
       "depth": 0,
-      "source": "local",
-      "dependencies": {}
+      "source": "git",
+      "dependencies": {
+        "com.unity.modules.animation": "1.0.0",
+        "com.unity.modules.imageconversion": "1.0.0",
+        "com.unity.modules.physics": "1.0.0",
+        "com.unity.modules.physics2d": "1.0.0",
+        "com.unity.modules.uielements": "1.0.0",
+        "com.unity.modules.screencapture": "1.0.0",
+        "com.unity.modules.unitywebrequest": "1.0.0",
+        "com.unity.nuget.newtonsoft-json": "3.0.2",
+        "com.unity.test-framework": "1.1.31"
+      },
+      "hash": "aa5fc638d623f56178d50329d9ad8c541a57fe66"
     },
     "com.dbrizov.naughtyattributes": {
-      "version": "file:F:/Games/Game Assets Collection/Unity Assets/NaughtyAttributes",
+      "version": "https://github.com/dbrizov/NaughtyAttributes.git#upm",
       "depth": 0,
-      "source": "local",
-      "dependencies": {}
+      "source": "git",
+      "dependencies": {},
+      "hash": "b11d62b28c5fcbe242988f9f8d451deb925cf23b"
     },
     "com.grignardreagent.gamelog": {
       "version": "https://github.com/Julianne-Natalie-Stingray/GameLog.git",
@@ -18,13 +30,6 @@
       "source": "git",
       "dependencies": {},
       "hash": "f6785507859debdf3dc44fe68a8230cc198fa3a2"
-    },
-    "com.grignardreagent.menutool": {
-      "version": "https://github.com/Julianne-Natalie-Stingray/MenuTool.git",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "84e714d8eadba0414e3e507c811926b84120cc2e"
     },
     "com.grignardreagent.timer": {
       "version": "https://github.com/Julianne-Natalie-Stingray/Timer.git",
@@ -139,6 +144,15 @@
       },
       "url": "https://packages.unity.cn"
     },
+    "com.unity.cinemachine": {
+      "version": "2.10.3",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.31"
+      },
+      "url": "https://packages.unity.cn"
+    },
     "com.unity.collab-proxy": {
       "version": "2.12.4",
       "depth": 0,
@@ -208,6 +222,13 @@
     "com.unity.mathematics": {
       "version": "1.2.6",
       "depth": 2,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.cn"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.1",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.cn"

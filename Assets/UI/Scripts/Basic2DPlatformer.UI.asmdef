@@ -1,0 +1,21 @@
+{
+    "name": "Basic2DPlatformer.UI",
+    "rootNamespace": "",
+    "references": [
+        "Basic2DPlatformer.Core",
+        "Basic2DPlatformer.Game",
+        "Basic2DPlatformer.Level",
+        "Basic2DPlatformer.Character",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

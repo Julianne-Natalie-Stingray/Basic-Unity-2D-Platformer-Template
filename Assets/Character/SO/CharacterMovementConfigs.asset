@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c60953fe3e95f434c950693635d9316f, type: 3}
+  m_Name: CharacterMovementConfigs
+  m_EditorClassIdentifier: 
+  moveSpeed: 8
+  jumpHeight: 3
+  timeToApex: 0.35
+  fallGravityMultiplier: 1.6
+  coyoteTime: 0.1
+  jumpBuffer: 0.1
+  variableJumpCutoff: 0.5
