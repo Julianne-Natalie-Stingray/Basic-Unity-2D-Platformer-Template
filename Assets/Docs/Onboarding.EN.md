@@ -63,6 +63,57 @@ See [EXTENDING.EN.md](EXTENDING.EN.md):
 - **Camera won't follow**: the virtual camera needs a body (`CinemachineTransposer`) and `Follow` set to the character.
 - **Clear never triggers**: `LevelManager.rootCondition` must reference a component that implements `ILevelGoal`.
 
-## 8. More
+## 8. Onboarding acceptance checklist (tick each)
+
+> Goal: confirm "this clone is ready and runs". All ticked = onboarding succeeded.
+
+### 8.1 Dependencies (terminal)
+
+Run from the **repo root**:
+
+```powershell
+# local-path dependencies should be 0 (no file: deps)
+(Select-String -Path Packages/packages-lock.json -Pattern '"source": "local"').Count
+# inspect a third-party package's source
+Select-String -Path Packages/packages-lock.json -Pattern 'com.dbrizov.naughtyattributes' -Context 0,3
+```
+
+- [ ] First command prints **`0`**.
+- [ ] Second shows **`"source": "git"`** in the context.
+- [ ] `Library/PackageCache/` contains `com.dbrizov.naughtyattributes@*` (the package is connected to git).
+
+### 8.2 Smart Merge (terminal)
+
+```powershell
+git config --get merge.unityyamlmerge.driver
+```
+
+- [ ] Prints something like `"...\UnityYAMLMerge.exe" merge -p %O %B %A %A`. (**No output = not configured**, see §2.)
+
+### 8.3 Compilation and Console
+
+- [ ] After Unity opens and finishes compiling, the **Console has no red errors** (yellow warnings are fine).
+
+### 8.4 Built-in validation tool
+
+- [ ] Open `Tools/Basic2DPlatformer/Project` → **Scenes** tab → `Validate`; the log shows `[Basic2DPlatformer] 校验通过, 无问题.`
+- [ ] Build Settings contains `MainMenu` / `SampleLevel` / `Final`.
+
+### 8.5 Directory tree
+
+- [ ] `Assets/` top level contains: `Docs/ Core/ Game/ Character/ Player/ Level/ UI/ Editor/ Infra/ Scene/ Visuals/ Sounds/`.
+- [ ] Each subsystem contains `Scripts/`; `Scene/Samples/` contains `MainMenu / SampleLevel / Final`.
+
+### 8.6 Minimal game flow
+
+Play `Assets/Scene/Samples/MainMenu.unity`:
+
+- [ ] Main menu → **New Game** → loads `SampleLevel`.
+- [ ] `A/D` moves, `Space` jumps; the camera follows within bounds.
+- [ ] Collect all 3 goals → clear panel appears → **Next** → `Final`.
+- [ ] Step on a `Hazard` → death panel appears.
+- [ ] No red errors in the Console throughout.
+
+## 9. More
 
 [ARCHITECTURE.EN.md](ARCHITECTURE.EN.md) · [EXTENDING.EN.md](EXTENDING.EN.md) · [CodeComments.EN.md](CodeComments.EN.md) · [AGENTS.EN.md](AGENTS.EN.md) · [2DPlatformerTemplate.md](2DPlatformerTemplate.md) (build-time design spec, not required reading)

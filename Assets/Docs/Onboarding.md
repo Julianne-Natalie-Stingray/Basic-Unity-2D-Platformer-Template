@@ -63,6 +63,57 @@
 - **相机不跟随**:虚拟相机需有 body(`CinemachineTransposer`)且 `Follow` 指向角色。
 - **通关不触发**:`LevelManager.rootCondition` 必须指向一个实现 `ILevelGoal` 的组件。
 
-## 8. 更多
+## 8. 上手验收清单(逐条勾选)
+
+> 目标:确认"这个克隆已就绪、能跑通"。全部勾上即上手成功。
+
+### 8.1 依赖(终端)
+
+在**仓库根**运行:
+
+```powershell
+# 本地路径依赖应为 0(没有 file: 依赖)
+(Select-String -Path Packages/packages-lock.json -Pattern '"source": "local"').Count
+# 查看第三方包的来源
+Select-String -Path Packages/packages-lock.json -Pattern 'com.dbrizov.naughtyattributes' -Context 0,3
+```
+
+- [ ] 第一条输出 **`0`**。
+- [ ] 第二条上下文里出现 **`"source": "git"`**。
+- [ ] `Library/PackageCache/` 下存在 `com.dbrizov.naughtyattributes@*`(包已连到 git)。
+
+### 8.2 Smart Merge(终端)
+
+```powershell
+git config --get merge.unityyamlmerge.driver
+```
+
+- [ ] 输出形如 `"...\UnityYAMLMerge.exe" merge -p %O %B %A %A`。(**无输出 = 未配置**,见 §2。)
+
+### 8.3 编译与 Console
+
+- [ ] Unity 打开后等待编译完成;**Console 无红色 Error**(黄色 Warning 可接受)。
+
+### 8.4 自带校验工具
+
+- [ ] 打开 `Tools/Basic2DPlatformer/Project` → **Scenes** 标签 → `Validate`;日志出现 `[Basic2DPlatformer] 校验通过, 无问题.`
+- [ ] Build Settings 含 `MainMenu` / `SampleLevel` / `Final`。
+
+### 8.5 目录树
+
+- [ ] `Assets/` 顶层含:`Docs/ Core/ Game/ Character/ Player/ Level/ UI/ Editor/ Infra/ Scene/ Visuals/ Sounds/`。
+- [ ] 每个子系统含 `Scripts/`;`Scene/Samples/` 含 `MainMenu / SampleLevel / Final`。
+
+### 8.6 最小游戏流程
+
+播放 `Assets/Scene/Samples/MainMenu.unity`:
+
+- [ ] 主菜单 → **New Game** → 进入 `SampleLevel`。
+- [ ] `A/D` 移动、`Space` 跳跃;相机跟随且受边界限制。
+- [ ] 收集全部 3 个目标 → 出现通关面板 → **Next** → `Final`。
+- [ ] 踩 `Hazard` → 出现死亡面板。
+- [ ] 全程 **Console 无 Error**。
+
+## 9. 更多
 
 [ARCHITECTURE.md](ARCHITECTURE.md) · [EXTENDING.md](EXTENDING.md) · [CodeComments.md](CodeComments.md) · [AGENTS.md](AGENTS.md) · [2DPlatformerTemplate.md](2DPlatformerTemplate.md)(构建设计规格,非必读)
