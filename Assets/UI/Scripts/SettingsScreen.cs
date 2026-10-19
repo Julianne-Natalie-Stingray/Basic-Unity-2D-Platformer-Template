@@ -3,8 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 暂停/设置面板.
+/// 音量设置面板: 读取、保存并即时应用音量.
 /// 归属: UI.
+/// 不负责: 面板的显隐与冻结, 由 UiPanel 负责.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class SettingsScreen : MonoBehaviour
@@ -12,37 +13,14 @@ public sealed class SettingsScreen : MonoBehaviour
     [SerializeField] private Slider masterVolume;
     [SerializeField] private Slider ostVolume;
     [SerializeField] private Slider sfxVolume;
-    [SerializeField] private Button exitButton;
     [SerializeField] private TMP_Text statusText;
-    [SerializeField] private SceneDefinition mainMenu;
 
     private void OnEnable()
     {
-        FreezeCoordinator.Request(this);
-    }
-
-    private void OnDisable()
-    {
-        FreezeCoordinator.Release(this);
-    }
-
-    public void Open()
-    {
-        if (gameObject.activeSelf || GameStateManager.Current == GameState.Loading || !HasReferences())
-            return;
-
         LoadValues();
+
         if (statusText != null)
             statusText.text = string.Empty;
-        if (exitButton != null)
-            exitButton.interactable = GameStateManager.Current == GameState.Playing;
-
-        gameObject.SetActive(true);
-    }
-
-    public void ContinueGame()
-    {
-        gameObject.SetActive(false);
     }
 
     public void SaveSettings()
@@ -65,16 +43,6 @@ public sealed class SettingsScreen : MonoBehaviour
 
         if (statusText != null)
             statusText.text = "Save failed.";
-    }
-
-    public void ReturnToMainMenu()
-    {
-        if (mainMenu == null || CoreFacade.Instance == null || CoreFacade.Instance.SceneSwitch == null)
-            return;
-
-        gameObject.SetActive(false);
-        if (CoreFacade.Instance.SceneSwitch.RequestSwitch(mainMenu) == null)
-            gameObject.SetActive(true);
     }
 
     private void LoadValues()

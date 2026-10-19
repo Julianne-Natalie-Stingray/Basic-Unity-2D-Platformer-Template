@@ -4,6 +4,7 @@
     "references": [
         "Basic2DPlatformer.Infra",
         "Basic2DPlatformer.Game",
+        "GrignardReagent.Pooling",
         "Unity.InputSystem",
         "NaughtyAttributes.Core",
         "GrignardReagent.Timer"

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -228,7 +229,240 @@ public class ProjectToolWindow : EditorWindow
             }
         }
 
+        problems += ValidateArchitecture();
+        problems += ValidateUiReferences();
+
         Debug.Log(problems == 0 ? "[Basic2DPlatformer] 校验通过, 无问题." : $"[Basic2DPlatformer] 校验发现 {problems} 个问题.");
+    }
+
+    [Serializable]
+    private sealed class AsmdefData
+    {
+        public string name;
+        public string[] references;
+    }
+
+    /// <summary>只校验 asmdef 依赖边; public 可见性由编译器与评审保证.</summary>
+    private static int ValidateArchitecture()
+    {
+        Dictionary<string, string[]> expected = new()
+        {
+            ["Basic2DPlatformer.Infra"] = new string[0],
+            ["Basic2DPlatformer.Game"] = new string[0],
+            ["Basic2DPlatformer.Character"] = new string[0],
+            ["Basic2DPlatformer.Contracts"] = new string[0],
+            ["GrignardReagent.Pooling"] = new string[0],
+            ["GrignardReagent.Pooling.Tests"] = new[] { "GrignardReagent.Pooling" },
+            ["Basic2DPlatformer.Core"] = new[]
+            {
+                "Basic2DPlatformer.Infra",
+                "Basic2DPlatformer.Game",
+                "GrignardReagent.Pooling"
+            },
+            ["Basic2DPlatformer.Level"] = new[]
+            {
+                "Basic2DPlatformer.Game",
+                "Basic2DPlatformer.Contracts"
+            },
+            ["Basic2DPlatformer.Player"] = new[]
+            {
+                "Basic2DPlatformer.Core",
+                "Basic2DPlatformer.Character",
+                "Basic2DPlatformer.Contracts"
+            },
+            ["Basic2DPlatformer.UI"] = new[]
+            {
+                "Basic2DPlatformer.Core",
+                "Basic2DPlatformer.Game",
+                "Basic2DPlatformer.Level",
+                "Basic2DPlatformer.Player"
+            },
+            ["Basic2DPlatformer.Editor"] = new[]
+            {
+                "Basic2DPlatformer.Infra",
+                "Basic2DPlatformer.Core",
+                "Basic2DPlatformer.Game",
+                "Basic2DPlatformer.UI"
+            }
+        };
+
+        Dictionary<string, string[]> actual = new();
+        foreach (string path in Directory.GetFiles("Assets", "*.asmdef", SearchOption.AllDirectories))
+        {
+            AsmdefData data = JsonUtility.FromJson<AsmdefData>(File.ReadAllText(path));
+            if (data == null || string.IsNullOrEmpty(data.name))
+                continue;
+
+            actual[data.name] = data.references ?? new string[0];
+        }
+
+        int problems = 0;
+
+        foreach (KeyValuePair<string, string[]> pair in expected)
+        {
+            if (!actual.TryGetValue(pair.Key, out string[] references))
+            {
+                Debug.LogError($"[Basic2DPlatformer] 缺少 asmdef: {pair.Key}");
+                problems++;
+                continue;
+            }
+
+            HashSet<string> actualProject = new();
+            foreach (string reference in references)
+            {
+                if (reference.StartsWith("Basic2DPlatformer", StringComparison.Ordinal) ||
+                    reference == "GrignardReagent.Pooling")
+                {
+                    actualProject.Add(reference);
+                }
+            }
+
+            foreach (string wanted in pair.Value)
+            {
+                if (!actualProject.Contains(wanted))
+                {
+                    Debug.LogError($"[Basic2DPlatformer] {pair.Key} 缺少依赖: {wanted}");
+                    problems++;
+                }
+            }
+
+            foreach (string present in actualProject)
+            {
+                if (Array.IndexOf(pair.Value, present) < 0)
+                {
+                    Debug.LogError($"[Basic2DPlatformer] {pair.Key} 多出依赖: {present}");
+                    problems++;
+                }
+            }
+        }
+
+        foreach (string name in actual.Keys)
+        {
+            if (!expected.ContainsKey(name))
+            {
+                Debug.LogError($"[Basic2DPlatformer] 未登记的 asmdef: {name}");
+                problems++;
+            }
+        }
+
+        if (HasCycle(expected))
+        {
+            Debug.LogError("[Basic2DPlatformer] asmdef 依赖存在环.");
+            problems++;
+        }
+
+        return problems;
+    }
+
+    private static bool HasCycle(Dictionary<string, string[]> graph)
+    {
+        HashSet<string> visiting = new();
+        HashSet<string> visited = new();
+
+        foreach (string node in graph.Keys)
+        {
+            if (Visit(node, graph, visiting, visited))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool Visit(
+        string node,
+        Dictionary<string, string[]> graph,
+        HashSet<string> visiting,
+        HashSet<string> visited)
+    {
+        if (visiting.Contains(node))
+            return true;
+
+        if (visited.Contains(node) || !graph.TryGetValue(node, out string[] next))
+            return false;
+
+        visiting.Add(node);
+
+        foreach (string edge in next)
+        {
+            if (Visit(edge, graph, visiting, visited))
+                return true;
+        }
+
+        visiting.Remove(node);
+        visited.Add(node);
+
+        return false;
+    }
+
+    private static int ValidateUiReferences()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            return 0;
+
+        int problems = 0;
+
+        foreach (string guid in AssetDatabase.FindAssets("t:SceneAsset"))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (!path.StartsWith("Assets/"))
+                continue;
+
+            Scene scene = EditorSceneManager.GetSceneByPath(path);
+            bool openedHere = !scene.IsValid() || !scene.isLoaded;
+
+            if (openedHere)
+                scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+
+            try
+            {
+                problems += ValidateSceneUi(scene, path);
+            }
+            finally
+            {
+                if (openedHere)
+                    EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        return problems;
+    }
+
+    private static int ValidateSceneUi(Scene scene, string path)
+    {
+        int problems = 0;
+
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            foreach (SceneSwitchButton component in root.GetComponentsInChildren<SceneSwitchButton>(true))
+                problems += WarnIfUnassigned(path, component, "target");
+
+            foreach (OpenPanelButton component in root.GetComponentsInChildren<OpenPanelButton>(true))
+                problems += WarnIfUnassigned(path, component, "target");
+
+            foreach (NextLevelScreen component in root.GetComponentsInChildren<NextLevelScreen>(true))
+            {
+                problems += WarnIfUnassigned(path, component, "panel");
+                problems += WarnIfUnassigned(path, component, "environment");
+            }
+
+            foreach (DeathScreen component in root.GetComponentsInChildren<DeathScreen>(true))
+            {
+                problems += WarnIfUnassigned(path, component, "panel");
+                problems += WarnIfUnassigned(path, component, "player");
+            }
+        }
+
+        return problems;
+    }
+
+    private static int WarnIfUnassigned(string scenePath, UnityEngine.Object target, string field)
+    {
+        SerializedProperty property = new SerializedObject(target).FindProperty(field);
+        if (property != null && property.objectReferenceValue != null)
+            return 0;
+
+        Debug.LogWarning($"[Basic2DPlatformer] {scenePath}: {target.GetType().Name}.{field} 为空.", target);
+        return 1;
     }
 
     private static List<string> FindDefinitionPaths()

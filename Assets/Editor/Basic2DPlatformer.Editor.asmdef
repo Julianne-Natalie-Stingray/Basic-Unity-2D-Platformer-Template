@@ -5,6 +5,7 @@
         "Basic2DPlatformer.Infra",
         "Basic2DPlatformer.Core",
         "Basic2DPlatformer.Game",
+        "Basic2DPlatformer.UI",
         "Unity.InputSystem"
     ],
     "includePlatforms": [

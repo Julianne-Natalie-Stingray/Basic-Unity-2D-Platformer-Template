@@ -16,7 +16,7 @@ Core 是共享运行时基础设施:输入、音频、场景切换、对象池�
 | `SceneSwitch/SceneSwitchManager.cs` | MonoBehaviour | 唯一切换入口 `RequestSwitch(SceneDefinition)`;拥有 `Loading` |
 | `SceneSwitch/SceneDefinition.cs` | ScriptableObject | 每个场景/关卡的稳定定义 |
 | `Audio/*` | — | `AudioBuilder` / `ISoundHandle` / `SoundHandle` / `AudioRegistry` / `AudioEmitter` / `AudioId` |
-| `GameObjectPool/GameObjectPool.cs` | class | Unity 对象池包装 |
+| `GrignardReagent.Pooling` | 独立 asmdef | `ComponentPool<T>`;Core 用它池化 `AudioEmitter` |
 
 ## 公共 API
 
@@ -31,3 +31,5 @@ Core 是共享运行时基础设施:输入、音频、场景切换、对象池�
 - `Assets/Infra` 里的生成物(`PlayerControls.cs`)属于 Infra 程序集,**不手改**。
 - 场景切换不施加机制:进入 `Loading` 不改 `timeScale`、不暂停音频。
 - `SceneSwitchConfigs` 与 `SceneId` 已移除,由 `SceneDefinition` 取代。
+- 可见性:`AudioRegistry` / `AudioEmitter` / `SoundHandle` 的成员多为 `internal`;外部只通过 `ISoundHandle` 与 `AudioManager.CreateBuilder()` 使用。
+- 对象池已迁到 `GrignardReagent.Pooling`(零项目依赖);计划抽成独立 UPM 包。

@@ -1,103 +1,43 @@
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
-/// 通关面板.
+/// 通关后打开通关面板.
 /// 归属: UI.
+/// 不负责: 下一关的切换(由按钮上的 SceneSwitchButton 负责).
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class NextLevelScreen : MonoBehaviour
 {
-    [SerializeField] private GameObject panel;
-    [SerializeField] private TMP_Text message;
-    [SerializeField] private Button nextButton;
-    [SerializeField] private SceneDefinition nextLevel;
+    [SerializeField] private EnvironmentFacade environment;
+    [SerializeField] private UiPanel panel;
 
-    private LevelManager levelManager;
-    private bool switching;
-
-    private void Awake()
-    {
-        if (panel != null)
-        {
-            panel.SetActive(false);
-            FreezeWhileVisible.Attach(panel);
-        }
-
-        if (nextButton != null)
-            nextButton.onClick.AddListener(LoadNextLevel);
-    }
-
-    private void OnDestroy()
-    {
-        if (nextButton != null)
-            nextButton.onClick.RemoveListener(LoadNextLevel);
-    }
+    private LevelManager level;
 
     private void OnEnable()
     {
-        BindLevelManager();
+        if (environment == null)
+            environment = FindObjectOfType<EnvironmentFacade>();
+
+        level = environment != null ? environment.Level : null;
+        if (level == null)
+            return;
+
+        level.LevelCleared += Show;
+        if (level.IsCleared)
+            Show();
     }
 
     private void OnDisable()
     {
-        if (levelManager != null)
-            levelManager.LevelCleared -= Show;
-        levelManager = null;
-        if (panel != null)
-            panel.SetActive(false);
-    }
+        if (level != null)
+            level.LevelCleared -= Show;
 
-    /// <summary>进入下一关; 请求被拒时不关闭面板.</summary>
-    public void LoadNextLevel()
-    {
-        if (!isActiveAndEnabled || switching || nextLevel == null)
-            return;
-        if (CoreFacade.Instance == null || CoreFacade.Instance.SceneSwitch == null)
-            return;
-        if (CoreFacade.Instance.SceneSwitch.RequestSwitch(nextLevel) == null)
-            return;
-
-        switching = true;
-    }
-
-    private void BindLevelManager()
-    {
-        if (levelManager != null)
-            levelManager.LevelCleared -= Show;
-
-        levelManager = FindLevelManager();
-        if (levelManager != null)
-        {
-            levelManager.LevelCleared += Show;
-            if (levelManager.IsCleared)
-                Show();
-        }
-    }
-
-    private LevelManager FindLevelManager()
-    {
-        if (!gameObject.scene.IsValid())
-            return null;
-
-        foreach (GameObject root in gameObject.scene.GetRootGameObjects())
-        {
-            LevelManager found = root.GetComponentInChildren<LevelManager>(true);
-            if (found != null)
-                return found;
-        }
-
-        return null;
+        level = null;
     }
 
     private void Show()
     {
-        if (panel == null || switching)
-            return;
-
-        if (message != null)
-            message.text = "Level complete!";
-        panel.SetActive(true);
+        if (panel != null)
+            panel.Open();
     }
 }

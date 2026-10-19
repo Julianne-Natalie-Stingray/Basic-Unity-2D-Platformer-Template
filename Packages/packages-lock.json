@@ -29,7 +29,14 @@
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "f6785507859debdf3dc44fe68a8230cc198fa3a2"
+      "hash": "030ff896fd4599145c28f0a8db20cfb6384fa7b2"
+    },
+    "com.grignardreagent.pooling": {
+      "version": "https://github.com/Julianne-Natalie-Stingray/UnityEngine-Custom-Pooling.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "8b4a045a11955e55424348ad046dc64f8a9e53f9"
     },
     "com.grignardreagent.timer": {
       "version": "https://github.com/Julianne-Natalie-Stingray/Timer.git",

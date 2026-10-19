@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// 角色运动机制: 拥有刚体, 只收意图, 由物理事实推出 MovementState.
 /// 归属: Character.
-/// 不负责: 输入来源、动画、物理控制权如何被组织; 可整体停用以移交物理.
+/// 不负责: 输入来源、动画、死亡语义、物理控制权如何被组织; 可整体停用以移交物理.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [DisallowMultipleComponent]
@@ -13,9 +13,6 @@ public class Motor : MonoBehaviour
 {
     /// <summary>MovementState 变化时触发.</summary>
     public event Action<MovementState> StateChanged;
-
-    /// <summary>死亡时触发一次.</summary>
-    public event Action Died;
 
     /// <summary>当前运动状态.</summary>
     public MovementState State { get; private set; }
@@ -28,9 +25,6 @@ public class Motor : MonoBehaviour
 
     /// <summary>朝向: 1 右, -1 左.</summary>
     public int Facing => facing;
-
-    /// <summary>是否已死亡.</summary>
-    public bool IsDead { get; private set; }
 
     /// <summary>控制是否被外部锁定(交互等); 锁定时停止水平意图.</summary>
     public bool IsControlLocked => isControlLocked;
@@ -67,8 +61,8 @@ public class Motor : MonoBehaviour
     public void SetJumpHeld(bool held)
         => jumpHeld = held;
 
-    /// <summary>锁定/解锁控制; 锁定时只保留竖直物理.</summary>
-    public void LockControl(bool locked)
+    /// <summary>锁定/解锁水平控制; 锁定时只保留竖直物理.</summary>
+    public void LockHorizontal(bool locked)
     {
         isControlLocked = locked;
         if (locked)
@@ -78,23 +72,23 @@ public class Motor : MonoBehaviour
         }
     }
 
-    /// <summary>死亡: 停输入、清速度、停模拟, 幂等.</summary>
-    public void Die()
+    /// <summary>启用运动; 与 Deactivate 成对.</summary>
+    public void Activate()
     {
-        if (IsDead)
-            return;
+        enabled = true;
+    }
 
-        IsDead = true;
-        isControlLocked = true;
-        body.velocity = Vector2.zero;
-        body.angularVelocity = 0f;
-        body.simulated = false;
-        SetState(MovementState.Dead);
-        Died?.Invoke();
+    /// <summary>停用运动并清空意图; 运动状态保留, 但不再参与 Unity 生命周期.</summary>
+    public void Deactivate()
+    {
+        moveInput = 0f;
+        jumpHeld = false;
+        jumpBufferedAt = float.NegativeInfinity;
+        enabled = false;
     }
 
     /// <summary>返回真实的向上支撑面, 与接地判定同规则.</summary>
-    public bool TryGetSupportingCollider(out Collider2D surface)
+    private bool TryGetSupportingCollider(out Collider2D surface)
     {
         surface = null;
         if (body == null || body.velocity.y > GroundedUpwardSpeedThreshold)
@@ -138,9 +132,6 @@ public class Motor : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (IsDead)
-            return;
-
         IsGrounded = TryGetSupportingCollider(out _);
         if (IsGrounded)
             lastGroundedAt = Time.time;

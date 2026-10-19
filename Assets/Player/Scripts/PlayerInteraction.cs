@@ -17,12 +17,14 @@ public class PlayerInteraction : MonoBehaviour
 
     private InputManager input;
     private Motor motor;
+    private PlayerDeath death;
     private CharacterAnimationView view;
     private readonly List<Collider2D> hits = new();
 
     private void Awake()
     {
         motor = GetComponent<Motor>();
+        death = GetComponent<PlayerDeath>();
         view = GetComponent<CharacterAnimationView>();
     }
 
@@ -68,7 +70,7 @@ public class PlayerInteraction : MonoBehaviour
 
         bool performed = PerformOperation(target);
         if (performed && view != null && view.TryPlayInteract() && motor != null)
-            motor.LockControl(true);
+            motor.LockHorizontal(true);
 
         return performed;
     }
@@ -97,7 +99,8 @@ public class PlayerInteraction : MonoBehaviour
             motor = GetComponent<Motor>();
 
         return isActiveAndEnabled && Time.timeScale > 0f &&
-            (motor == null || (!motor.IsDead && !motor.IsControlLocked));
+            (death == null || !death.IsDead) &&
+            (motor == null || !motor.IsControlLocked);
     }
 
     private bool PerformOperation(IInteractable target)

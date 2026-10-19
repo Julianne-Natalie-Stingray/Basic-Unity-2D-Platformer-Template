@@ -16,7 +16,7 @@ public sealed class LevelProgressTracker : MonoBehaviour
     private void OnEnable()
     {
         if (levelManager == null)
-            levelManager = FindObjectOfType<LevelManager>();
+            levelManager = GetComponent<LevelManager>();
         if (levelManager == null)
             return;
 

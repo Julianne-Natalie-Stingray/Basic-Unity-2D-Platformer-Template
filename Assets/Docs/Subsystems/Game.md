@@ -28,6 +28,6 @@ Game 承载全局状态、持久化设置与（后续的）进度。它不新建
 
 ## 注意
 
-- `GameStateManager` 目前**没有** owner 计数冻结接口;面板冻结由 `FreezeCoordinator`(新增)协调。
+- `GameStateManager` 目前**没有** owner 计数冻结接口;面板冻结由 `FreezeCoordinator` 协调,请求方是 UI 的 `UiPanel`(`FreezeWhileVisible` 已移除)。
 - 设置只做存取,不负责应用;应用由拥有该系统的代码完成。
 - 进度子系统(顺序解锁)为后续交付,尚未落地。

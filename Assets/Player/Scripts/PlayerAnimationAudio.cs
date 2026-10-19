@@ -15,6 +15,13 @@ public sealed class PlayerAnimationAudio : MonoBehaviour
     private ISoundHandle moveHandle;
     private ISoundHandle interactHandle;
 
+    private PlayerDeath death;
+
+    private void Awake()
+    {
+        death = GetComponentInParent<PlayerDeath>();
+    }
+
     /// <summary>死亡动画事件: 允许在死亡面板冻结游戏后继续发声.</summary>
     public void PlayDeathAudio()
         => Play(deathAudio, true, ref deathHandle);
@@ -22,8 +29,7 @@ public sealed class PlayerAnimationAudio : MonoBehaviour
     /// <summary>移动动画事件: 可在每个落脚帧调用.</summary>
     public void PlayMoveAudio()
     {
-        Motor motor = GetComponentInParent<Motor>();
-        if (motor != null && motor.IsDead)
+        if (death != null && death.IsDead)
             return;
 
         Play(moveAudio, false, ref moveHandle);

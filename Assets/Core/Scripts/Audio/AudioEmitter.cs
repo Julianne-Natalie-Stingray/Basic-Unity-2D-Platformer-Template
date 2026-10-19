@@ -10,15 +10,15 @@ using System;
 [DisallowMultipleComponent]
 public class AudioEmitter : MonoBehaviour
 {
-    public event Action<AudioEmitter> onAudioFinished;
+    internal event Action<AudioEmitter> onAudioFinished;
 
-    public AudioId AudioId => data ? data.AudioId : AudioId.DefaultSfx;
-    public bool IsPlaying => source && source.isPlaying;
-    public bool IsFinished => isFinished;
-    public bool IsLooping => data && data.Loop;
-    public bool IsFollowingTarget => followTarget;
+    internal AudioId AudioId => data ? data.AudioId : AudioId.DefaultSfx;
+    internal bool IsPlaying => source && source.isPlaying;
+    internal bool IsFinished => isFinished;
+    internal bool IsLooping => data && data.Loop;
+    internal bool IsFollowingTarget => followTarget;
 
-    public float Volume
+    internal float Volume
     {
         get => volume;
         set
@@ -28,7 +28,7 @@ public class AudioEmitter : MonoBehaviour
         }
     }
 
-    public float Pitch
+    internal float Pitch
     {
         get => pitch;
         set
@@ -41,7 +41,7 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>本次播放是否在游戏冻结时被保留; clip 仅提供静态初值, 该值归发起播放的一方所有.</summary>
-    public bool SurviveFreeze
+    internal bool SurviveFreeze
     {
         get => surviveFreeze;
         set
@@ -96,7 +96,7 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>只写入 clip 拥有的静态特征; 音量与音高属于单次播放, 在 Play 中确立.</summary>
-    public void Configure(AudioClipData data)
+    internal void Configure(AudioClipData data)
     {
         InitializeInternal();
 
@@ -127,7 +127,7 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>会先用 Stop 结束仍在进行中的播放以便完成回调执行, 使池能对已交出的 emitter 记账; 循环 clip 不装载结束 Timer.</summary>
-    public void Play()
+    internal void Play()
     {
         Stop();
 
@@ -176,7 +176,7 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>幂等; 提前与自然结束都只经此报告一次, 因此句柄的 Stop 与抢占不会把同一次播放报告两次.</summary>
-    public void Stop()
+    internal void Stop()
     {
         if (!isPlaying)
             return;
@@ -187,13 +187,13 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>只写世界坐标, 不触碰跟随状态; spatialBlend 大于零的 clip 必须靠它或 SetFollowTarget 才从非听者位置发声.</summary>
-    public void SetPosition(Vector3 position)
+    internal void SetPosition(Vector3 position)
     {
         transform.position = position;
     }
 
     /// <summary>保存目标并在 LateUpdate 跟踪, 不改变父子关系, 因此 emitter 不随目标销毁.</summary>
-    public void SetFollowTarget(Transform target)
+    internal void SetFollowTarget(Transform target)
     {
         if (!target)
         {
@@ -215,7 +215,7 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>清空单次播放数据与跟随目标并恢复默认音量音高, 使之后的播放不继承上一次的任何东西.</summary>
-    public void ResetEmitter()
+    internal void ResetEmitter()
     {
         InitializeInternal();
 

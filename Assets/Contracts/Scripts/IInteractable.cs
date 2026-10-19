@@ -2,7 +2,7 @@ using System;
 
 /// <summary>
 /// 场景可交互契约.
-/// 归属: Player.
+/// 归属: Contracts.
 /// </summary>
 public interface IInteractable
 {

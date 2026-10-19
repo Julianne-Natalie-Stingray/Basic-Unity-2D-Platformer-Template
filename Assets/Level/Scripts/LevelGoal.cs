@@ -30,7 +30,7 @@ public class LevelGoal : MonoBehaviour, ILevelGoal
         if (Fulfilled || other == null)
             return;
 
-        if (other.GetComponentInParent<Motor>() == null)
+        if (!other.CompareTag("Player"))
             return;
 
         Fulfilled = true;

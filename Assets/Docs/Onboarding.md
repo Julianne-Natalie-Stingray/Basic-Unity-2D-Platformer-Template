@@ -25,7 +25,8 @@
 
 ## 3. 工程结构
 
-- 子系统:`Core` / `Game` / `Character` / `Player` / `Level` / `UI` / `Editor` / `Infra`。
+- 子系统:`Core` / `Game` / `Contracts` / `Character` / `Player` / `Level` / `UI` / `Editor` / `Infra`。
+- 对象池 `GrignardReagent.Pooling` 是独立 asmdef(计划抽 UPM),不依赖项目程序集。
 - 代码在 `Assets/<Subsystem>/Scripts/`;资源随子系统(`SO/`/`Prefabs/`/`Physics/`)或按格式(`Scene/`/`Visuals/`/`Sounds/`)。
 - 程序集边界与依赖方向见 [ARCHITECTURE.md](ARCHITECTURE.md);**所有脚本必须落在某个 asmdef 内**。
 
@@ -40,11 +41,11 @@
 
 详见 [EXTENDING.md](EXTENDING.md):
 
-- **加场景/关卡**:建场景 + 放 `LevelManager`/通关条件 + 建 `SceneDefinition`(工具注册)。
-- **加可交互物**:实现 `IInteractable`。
-- **加 UI 屏幕**:新增脚本 + 预制体变体。
+- **加场景/关卡**:建场景 + 放 `LevelManager`/通关条件 + `EnvironmentFacade` + 建 `SceneDefinition`(工具注册)。
+- **加可交互物**:实现 `Contracts.IInteractable`。
+- **加 UI 屏幕**:面板挂 `UiPanel`;按钮用 `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton`。
 - **加输入动作 / Tag / 数据 SO**:工具窗口 `Tools/Basic2DPlatformer/Project` 对应标签页。
-- **加玩家能力**:新增组件,运动经 `Motor` 的意图 API。
+- **加玩家能力**:新增组件,运动经 `Motor` 的意图 API;死亡经 `Contracts.IKillable`。
 
 ## 6. 从模板派生新项目
 

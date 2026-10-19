@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 玩家进入即调用其 Motor.Die().
+/// 玩家进入即调用其 IKillable.Kill().
 /// 归属: Level.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
@@ -20,8 +20,8 @@ public class Hazard : MonoBehaviour
         if (other == null)
             return;
 
-        Motor motor = other.GetComponentInParent<Motor>();
-        if (motor != null)
-            motor.Die();
+        IKillable killable = other.GetComponentInParent<IKillable>();
+        if (killable != null)
+            killable.Kill();
     }
 }

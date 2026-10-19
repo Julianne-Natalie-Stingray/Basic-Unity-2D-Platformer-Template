@@ -14,8 +14,5 @@ public enum MovementState
     Jump,
 
     /// <summary>离地且下落.</summary>
-    Fall,
-
-    /// <summary>已死亡, 不再运动.</summary>
-    Dead
+    Fall
 }

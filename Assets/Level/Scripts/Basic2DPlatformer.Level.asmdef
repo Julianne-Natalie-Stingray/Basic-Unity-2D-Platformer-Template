@@ -3,7 +3,7 @@
     "rootNamespace": "",
     "references": [
         "Basic2DPlatformer.Game",
-        "Basic2DPlatformer.Character"
+        "Basic2DPlatformer.Contracts"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

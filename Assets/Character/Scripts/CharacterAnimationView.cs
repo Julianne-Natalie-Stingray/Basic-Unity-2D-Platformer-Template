@@ -77,7 +77,16 @@ public class CharacterAnimationView : MonoBehaviour
     public void OnInteractionAnimationEnded()
     {
         if (motor != null)
-            motor.LockControl(false);
+            motor.LockHorizontal(false);
+    }
+
+    /// <summary>请求播放死亡动画; 由 PlayerDeath 调用.</summary>
+    public void PlayDeath()
+    {
+        if (!CanUseAnimator())
+            return;
+
+        animator.SetTrigger(DieParameter);
     }
 
     private void ApplyState(MovementState state)
@@ -86,8 +95,6 @@ public class CharacterAnimationView : MonoBehaviour
             return;
 
         animator.SetBool(MovingParameter, state == MovementState.Run);
-        if (state == MovementState.Dead)
-            animator.SetTrigger(DieParameter);
     }
 
     private void ApplyFacing()

@@ -5,7 +5,7 @@
         "Basic2DPlatformer.Core",
         "Basic2DPlatformer.Game",
         "Basic2DPlatformer.Level",
-        "Basic2DPlatformer.Character",
+        "Basic2DPlatformer.Player",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

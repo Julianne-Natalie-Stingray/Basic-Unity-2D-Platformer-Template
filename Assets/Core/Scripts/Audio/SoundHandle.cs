@@ -20,7 +20,7 @@ public sealed class SoundHandle : ISoundHandle
     private bool isFinished;
 
     /// <summary>订阅 emitter 的完成回调 —— 所有结束路径都汇入它, 因此句柄不会漏掉任何打断.</summary>
-    public SoundHandle(AudioEmitter emitter, AudioId audioId)
+    internal SoundHandle(AudioEmitter emitter, AudioId audioId)
     {
         this.emitter = emitter;
         this.audioId = audioId;

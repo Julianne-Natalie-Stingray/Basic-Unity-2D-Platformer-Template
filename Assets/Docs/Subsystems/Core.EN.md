@@ -16,7 +16,7 @@ Core is the shared runtime infrastructure: input, audio, scene switch, object po
 | `SceneSwitch/SceneSwitchManager.cs` | MonoBehaviour | Only switch entry `RequestSwitch(SceneDefinition)`; owns `Loading` |
 | `SceneSwitch/SceneDefinition.cs` | ScriptableObject | Stable definition for each scene/level |
 | `Audio/*` | — | `AudioBuilder` / `ISoundHandle` / `SoundHandle` / `AudioRegistry` / `AudioEmitter` / `AudioId` |
-| `GameObjectPool/GameObjectPool.cs` | class | Unity object-pool wrapper |
+| `GrignardReagent.Pooling` | standalone asmdef | `ComponentPool<T>`; Core pools `AudioEmitter` with it |
 
 ## Public API
 
@@ -31,3 +31,5 @@ Core is the shared runtime infrastructure: input, audio, scene switch, object po
 - Generated files under `Assets/Infra` (`PlayerControls.cs`) belong to the Infra assembly and are **never hand-edited**.
 - A scene switch applies no mechanism: entering `Loading` does not change `timeScale` or pause audio.
 - `SceneSwitchConfigs` and `SceneId` were removed, replaced by `SceneDefinition`.
+- Visibility: members of `AudioRegistry` / `AudioEmitter` / `SoundHandle` are mostly `internal`; the outside uses `ISoundHandle` and `AudioManager.CreateBuilder()`.
+- Object pooling moved to `GrignardReagent.Pooling` (zero project dependencies); it is planned to become a standalone UPM package.

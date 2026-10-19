@@ -3,6 +3,7 @@
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.dbrizov.naughtyattributes": "https://github.com/dbrizov/NaughtyAttributes.git#upm",
     "com.grignardreagent.gamelog": "https://github.com/Julianne-Natalie-Stingray/GameLog.git",
+    "com.grignardreagent.pooling": "https://github.com/Julianne-Natalie-Stingray/UnityEngine-Custom-Pooling.git",
     "com.grignardreagent.timer": "https://github.com/Julianne-Natalie-Stingray/Timer.git",
     "com.unity.cinemachine": "2.10.3",
     "com.unity.collab-proxy": "2.12.4",

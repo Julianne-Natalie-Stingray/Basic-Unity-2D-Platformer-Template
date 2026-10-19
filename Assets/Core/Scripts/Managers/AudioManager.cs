@@ -10,14 +10,14 @@ using UnityEngine.Audio;
 [DisallowMultipleComponent]
 public class AudioManager : MonoBehaviour
 {
-    public AudioRegistry Registry => registry;
+    internal AudioRegistry Registry => registry;
 
     [SerializeField] private AudioEmitter emitterPrefab;
     [SerializeField] private Transform emitterRoot;
     [SerializeField, Expandable] private AudioManagerConfigs configs;
     [SerializeField] private AudioMixer mixer;
 
-    private GameObjectPool<AudioEmitter> emitterPool;
+    private ComponentPool<AudioEmitter> emitterPool;
     private AudioRegistry registry;
 
     private const float MinVolume = 0f;
@@ -52,7 +52,7 @@ public class AudioManager : MonoBehaviour
 
     private void OnDestroy()
     {
-        emitterPool?.Clear();
+        emitterPool?.Dispose();
     }
 
     /// <summary>发放一个全新凭证, 其参数独立于其他任何请求, 因此调用方不会继承更早播放的状态.</summary>
@@ -82,7 +82,7 @@ public class AudioManager : MonoBehaviour
     }
 
     /// <summary>启动声音的唯一入口, 由 AudioBuilder.Play 调用; 池不存在, 无 clip, 冻结门未放行或池耗尽时返回 null 并记录日志.</summary>
-    public ISoundHandle Play(
+    internal ISoundHandle Play(
         AudioId requested,
         float volume,
         float pitch,
@@ -202,20 +202,19 @@ public class AudioManager : MonoBehaviour
 
     private AudioEmitter ReserveEmitter()
     {
-        if (!emitterPool.CanReuse(configs.MaxPoolSize))
-        {
-            GameLog.Warning(this)
-                .Subsystem("Core")
-                .Name(LogName.Class)
-                .Issue(LogIssue.Specify(
-                    $"Pool exhausted at {configs.MaxPoolSize} emitters; request refused. "))
-                .Action(LogAction.Ignore)
-                .Write();
+        AudioEmitter emitter = emitterPool.Get();
+        if (emitter != null)
+            return emitter;
 
-            return null;
-        }
+        GameLog.Warning(this)
+            .Subsystem("Core")
+            .Name(LogName.Class)
+            .Issue(LogIssue.Specify(
+                $"Pool exhausted at {configs.MaxPoolSize} emitters; request refused. "))
+            .Action(LogAction.Ignore)
+            .Write();
 
-        return emitterPool.Get();
+        return null;
     }
 
     private void OnEmitterGet(AudioEmitter emitter)
@@ -229,7 +228,7 @@ public class AudioManager : MonoBehaviour
 
     private void OnEmitterRelease(AudioEmitter emitter)
     {
-        // 本方法即池的归还回调: 绝不能自己调用 GameObjectPool.Release, 否则会经 actionOnRelease 递归到栈溢出.
+        // 本方法即池的归还回调: 绝不能自己调用 ComponentPool.Release, 否则会经 actionOnRelease 递归到栈溢出.
         emitter.onAudioFinished -= ReleaseEmitter;
         emitter.onAudioFinished -= OnEmitterRelease;
 
@@ -308,15 +307,15 @@ public class AudioManager : MonoBehaviour
         emitterPool = BuildEmitterPool();
     }
 
-    private GameObjectPool<AudioEmitter> BuildEmitterPool()
+    private ComponentPool<AudioEmitter> BuildEmitterPool()
         => new(
             emitterPrefab,
             emitterRoot,
-            OnEmitterGet,
-            OnEmitterRelease,
-            configs.CollectionCheck,
+            configs.MaxPoolSize,
             configs.DefaultCapacity,
-            configs.MaxPoolSize);
+            configs.CollectionCheck,
+            OnEmitterGet,
+            OnEmitterRelease);
 
     [SerializeField] private AudioId debugAudioRequest;
     [SerializeField] private int requestTime = 1;

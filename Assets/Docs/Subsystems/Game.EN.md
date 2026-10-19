@@ -28,6 +28,6 @@ Game holds global state, persisted settings, and (later) progress. It does not i
 
 ## Notes
 
-- `GameStateManager` currently has **no** owner-counted freeze API; panel freezing is coordinated by `FreezeCoordinator` (new).
+- `GameStateManager` currently has **no** owner-counted freeze API; panel freezing is coordinated by `FreezeCoordinator`, requested by the UI's `UiPanel` (`FreezeWhileVisible` was removed).
 - The store only reads/writes; applying belongs to the system that owns the value.
 - The progress subsystem (sequential unlock) is a later delivery and is not in place yet.

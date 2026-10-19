@@ -25,7 +25,8 @@
 
 ## 3. Project structure
 
-- Subsystems: `Core` / `Game` / `Character` / `Player` / `Level` / `UI` / `Editor` / `Infra`.
+- Subsystems: `Core` / `Game` / `Contracts` / `Character` / `Player` / `Level` / `UI` / `Editor` / `Infra`.
+- The object pool `GrignardReagent.Pooling` is a standalone asmdef (planned UPM package) with no project dependencies.
 - Code lives under `Assets/<Subsystem>/Scripts/`; assets live with a subsystem (`SO/`, `Prefabs/`, `Physics/`) or by format (`Scene/`, `Visuals/`, `Sounds/`).
 - Assembly boundaries and dependency direction: [ARCHITECTURE.EN.md](ARCHITECTURE.EN.md); **every script must live under an asmdef**.
 
@@ -40,11 +41,11 @@
 
 See [EXTENDING.EN.md](EXTENDING.EN.md):
 
-- **Add a scene/level**: create the scene + add `LevelManager`/clear conditions + a `SceneDefinition` (register via the tool).
-- **Add an interactable**: implement `IInteractable`.
-- **Add a UI screen**: new script + prefab variant.
+- **Add a scene/level**: create the scene + add `LevelManager`/clear conditions + `EnvironmentFacade` + a `SceneDefinition` (register via the tool).
+- **Add an interactable**: implement `Contracts.IInteractable`.
+- **Add a UI screen**: attach `UiPanel` to the panel; use `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton`.
 - **Add input actions / tags / data SO**: use the matching tab in `Tools/Basic2DPlatformer/Project`.
-- **Add a player ability**: new component; drive movement via the `Motor` intent API.
+- **Add a player ability**: new component; drive movement via the `Motor` intent API; die via `Contracts.IKillable`.
 
 ## 6. Forking the template into a new project
 

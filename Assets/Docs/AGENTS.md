@@ -13,6 +13,7 @@
 ## 2. 代码规范(摘要)
 
 - 一个文件一个类型;显式访问词;property + backing field;`GameLog` 记日志;`InitializeInternal` / `ResolveDependencies`。
+- 可见性:类型 `public`,成员默认 `internal`(例外见 `ARCHITECTURE.md §1`);字段只用 `[SerializeField] private`。
 - 代码注释以 [CodeComments.md](CodeComments.md) 为准(中文单一语言)。
 - 详细边界与理由见 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
@@ -20,6 +21,7 @@
 
 - 所有文档集中在 `Assets/Docs/`;子系统文档在 `Assets/Docs/Subsystems/<Name>.md`。
 - 每份文档成对:`NAME.md`(中文,**基准**)+ `NAME.EN.md`(英文)。英文落后时以中文为准。
+- 例外:构建期设计规格 `2DPlatformerTemplate.md` 以中文维护,英文入口是 `ARCHITECTURE.EN.md` / `EXTENDING.EN.md` / `Onboarding.EN.md`。
 - 当前为简单版,后续会拆分职能(如 CONTRIBUTING、ADR);先保持本结构。
 
 ## 4. 版本控制

@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// </summary>
 public sealed class AudioRegistry
 {
-    public int Count => emitters.Count;
+    internal int Count => emitters.Count;
 
     private readonly List<AudioEmitter> emitters = new();
     private readonly List<long> sequences = new();
@@ -15,7 +15,7 @@ public sealed class AudioRegistry
     private long nextSequence;
 
     /// <summary>先压实延迟移除, 再追加 emitter 与下一个序号 —— 序号即开始顺序的依据.</summary>
-    public void Register(AudioEmitter emitter)
+    internal void Register(AudioEmitter emitter)
     {
         if (!emitter)
             return;
@@ -27,7 +27,7 @@ public sealed class AudioRegistry
     }
 
     /// <summary>只把槽位置空而不移除, 使正在迭代本注册表的抢占流程不会遇到被改动的列表.</summary>
-    public void Unregister(AudioEmitter emitter)
+    internal void Unregister(AudioEmitter emitter)
     {
         if (!emitter)
             return;
@@ -40,7 +40,7 @@ public sealed class AudioRegistry
         sequences[index] = 0;
     }
 
-    public int CountOf(AudioId audioId)
+    internal int CountOf(AudioId audioId)
     {
         int count = 0;
 
@@ -54,7 +54,7 @@ public sealed class AudioRegistry
     }
 
     /// <summary>返回最小序号的注册项, 可限定在某个 AudioId 上; 线性扫描只在已经触顶时执行, 不在常规播放路径上.</summary>
-    public bool TryGetOldest(AudioId audioId, out AudioEmitter emitter)
+    internal bool TryGetOldest(AudioId audioId, out AudioEmitter emitter)
     {
         emitter = null;
         long oldest = long.MaxValue;
@@ -76,7 +76,7 @@ public sealed class AudioRegistry
         return emitter;
     }
 
-    public bool TryGetOldest(out AudioEmitter emitter)
+    internal bool TryGetOldest(out AudioEmitter emitter)
     {
         emitter = null;
         long oldest = long.MaxValue;
@@ -99,7 +99,7 @@ public sealed class AudioRegistry
     }
 
     /// <summary>原地重建两个并列列表并保持存活项的相对顺序, 因此开始顺序不被破坏.</summary>
-    public void Compact()
+    internal void Compact()
     {
         int write = 0;
 

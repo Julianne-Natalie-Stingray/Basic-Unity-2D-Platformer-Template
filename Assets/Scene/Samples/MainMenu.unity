@@ -628,6 +628,7 @@ GameObject:
   - component: {fileID: 379766379}
   - component: {fileID: 379766378}
   - component: {fileID: 379766376}
+  - component: {fileID: 379766380}
   m_Layer: 0
   m_Name: SettingsPanel
   m_TagString: Untagged
@@ -650,9 +651,7 @@ MonoBehaviour:
   masterVolume: {fileID: 1951124743}
   ostVolume: {fileID: 1185402383}
   sfxVolume: {fileID: 1020313468}
-  exitButton: {fileID: 589754950}
   statusText: {fileID: 157774213}
-  mainMenu: {fileID: 11400000, guid: 0fec7908deb00a54597be1ccf25395b4, type: 2}
 --- !u!224 &379766377
 RectTransform:
   m_ObjectHideFlags: 0
@@ -721,6 +720,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 379766375}
   m_CullTransparentMesh: 1
+--- !u!114 &379766380
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 379766375}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1c3f14e936f4c14db5829d9706c5219, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  defaultSelection: {fileID: 706011304}
+  freezeWhileOpen: 0
 --- !u!1 &407718265
 GameObject:
   m_ObjectHideFlags: 0
@@ -1170,6 +1183,7 @@ GameObject:
   - component: {fileID: 589754948}
   - component: {fileID: 589754950}
   - component: {fileID: 589754947}
+  - component: {fileID: 589754951}
   m_Layer: 0
   m_Name: ReturnToMainMenu
   m_TagString: Untagged
@@ -1209,8 +1223,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!114 &589754948
 MonoBehaviour:
@@ -1293,19 +1309,20 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 589754948}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 379766376}
-        m_TargetAssemblyTypeName: SettingsScreen, Basic2DPlatformer.UI
-        m_MethodName: ReturnToMainMenu
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
+--- !u!114 &589754951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 589754945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fe24d738292a34e87f954b5f5c947b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 11400000, guid: 0fec7908deb00a54597be1ccf25395b4, type: 2}
 --- !u!1 &601299200
 GameObject:
   m_ObjectHideFlags: 0
@@ -1567,8 +1584,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!114 &706011304
 MonoBehaviour:
@@ -1614,9 +1633,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 379766376}
-        m_TargetAssemblyTypeName: SettingsScreen, Basic2DPlatformer.UI
-        m_MethodName: ContinueGame
+      - m_Target: {fileID: 379766380}
+        m_TargetAssemblyTypeName: UiPanel, Basic2DPlatformer.UI
+        m_MethodName: Close
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1958,6 +1977,7 @@ GameObject:
   - component: {fileID: 986147973}
   - component: {fileID: 986147972}
   - component: {fileID: 986147974}
+  - component: {fileID: 986147977}
   m_Layer: 0
   m_Name: Settings
   m_TagString: Untagged
@@ -2008,19 +2028,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 986147973}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 2079771146}
-        m_TargetAssemblyTypeName: MainMenuScreen, Basic2DPlatformer.UI
-        m_MethodName: OpenSettings
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &986147973
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2063,8 +2071,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!222 &986147975
 CanvasRenderer:
@@ -2094,6 +2104,19 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 320, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &986147977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 986147971}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e3998ca2b268564289ee6f1b2cf8fe5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 379766380}
 --- !u!1 &987108418
 GameObject:
   m_ObjectHideFlags: 0
@@ -2358,8 +2381,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!114 &1020313468
 MonoBehaviour:
@@ -2464,8 +2489,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!114 &1042380895
 MonoBehaviour:
@@ -2649,8 +2676,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!114 &1185402383
 MonoBehaviour:
@@ -3111,6 +3140,7 @@ GameObject:
   - component: {fileID: 1581403627}
   - component: {fileID: 1581403626}
   - component: {fileID: 1581403628}
+  - component: {fileID: 1581403631}
   m_Layer: 0
   m_Name: Exit
   m_TagString: Untagged
@@ -3161,19 +3191,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1581403627}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 2079771146}
-        m_TargetAssemblyTypeName: MainMenuScreen, Basic2DPlatformer.UI
-        m_MethodName: ExitGame
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1581403627
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3216,8 +3234,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!222 &1581403629
 CanvasRenderer:
@@ -3247,6 +3267,18 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -80}
   m_SizeDelta: {x: 320, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1581403631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1581403625}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea0d729942a27d24d818182f040732d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1660303106
 GameObject:
   m_ObjectHideFlags: 0
@@ -3753,8 +3785,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!114 &1951124743
 MonoBehaviour:
@@ -3895,6 +3929,7 @@ GameObject:
   - component: {fileID: 1991719926}
   - component: {fileID: 1991719925}
   - component: {fileID: 1991719927}
+  - component: {fileID: 1991719930}
   m_Layer: 0
   m_Name: NewGame
   m_TagString: Untagged
@@ -3945,19 +3980,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1991719926}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 2079771146}
-        m_TargetAssemblyTypeName: MainMenuScreen, Basic2DPlatformer.UI
-        m_MethodName: NewGame
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1991719926
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4000,8 +4023,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: 2
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!222 &1991719928
 CanvasRenderer:
@@ -4031,6 +4056,19 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 80}
   m_SizeDelta: {x: 320, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1991719930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1991719924}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0fe24d738292a34e87f954b5f5c947b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  target: {fileID: 11400000, guid: 8110c5b3a899f314aae35872c8a734f5, type: 2}
 --- !u!1 &2003298795
 GameObject:
   m_ObjectHideFlags: 0
@@ -4309,34 +4347,14 @@ GameObject:
   m_Component:
   - component: {fileID: 2079771150}
   - component: {fileID: 2079771149}
-  - component: {fileID: 2079771148}
   - component: {fileID: 2079771147}
-  - component: {fileID: 2079771146}
   m_Layer: 0
-  m_Name: MenuUI
+  m_Name: UiRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2079771146
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2079771145}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2f5896f0b37651348a111e43d694f992, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  newGameButton: {fileID: 1991719925}
-  settingsButton: {fileID: 986147972}
-  exitButton: {fileID: 1581403626}
-  settingsScreen: {fileID: 379766376}
-  startStatus: {fileID: 1416488868}
-  sampleLevel: {fileID: 11400000, guid: 8110c5b3a899f314aae35872c8a734f5, type: 2}
 --- !u!114 &2079771147
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4354,29 +4372,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &2079771148
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2079771145}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_UiScaleMode: 1
-  m_ReferencePixelsPerUnit: 100
-  m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1280, y: 720}
-  m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
-  m_PhysicalUnit: 3
-  m_FallbackScreenDPI: 96
-  m_DefaultSpriteDPI: 96
-  m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
 --- !u!223 &2079771149
 Canvas:
   m_ObjectHideFlags: 0

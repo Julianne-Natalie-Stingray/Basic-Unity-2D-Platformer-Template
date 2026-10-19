@@ -13,6 +13,7 @@
 ## 2. Code standards (summary)
 
 - One type per file; explicit access modifiers; property + backing field; log via `GameLog`; `InitializeInternal` / `ResolveDependencies`.
+- Visibility: types `public`, members `internal` by default (exceptions in `ARCHITECTURE.EN.md §1`); fields only `[SerializeField] private`.
 - Code comments follow [CodeComments.EN.md](CodeComments.EN.md) (Chinese only).
 - Full boundaries and rationale: [ARCHITECTURE.EN.md](ARCHITECTURE.EN.md).
 
@@ -20,6 +21,7 @@
 
 - All docs live in `Assets/Docs/`; subsystem docs in `Assets/Docs/Subsystems/<Name>.md`.
 - Every doc is paired: `NAME.md` (Chinese, **canonical**) + `NAME.EN.md` (English). When they diverge, Chinese wins.
+- Exception: the build-time spec `2DPlatformerTemplate.md` is maintained in Chinese; its English entry points are `ARCHITECTURE.EN.md` / `EXTENDING.EN.md` / `Onboarding.EN.md`.
 - This is a simple version; responsibilities may be split later (CONTRIBUTING, ADR, etc.).
 
 ## 4. Version control

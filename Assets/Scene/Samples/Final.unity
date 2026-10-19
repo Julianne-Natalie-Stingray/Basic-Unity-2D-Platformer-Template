@@ -213,6 +213,7 @@ GameObject:
   - component: {fileID: 317031824}
   - component: {fileID: 317031823}
   - component: {fileID: 317031822}
+  - component: {fileID: 317031826}
   m_Layer: 0
   m_Name: Exit
   m_TagString: Untagged
@@ -252,8 +253,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hoverSfx: -1
   downSfx: -1
   upSfx: -1
+  submitSfx: -1
   sliderChangedSfx: -1
 --- !u!114 &317031823
 MonoBehaviour:
@@ -298,19 +301,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 317031824}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1725879347}
-        m_TargetAssemblyTypeName: FinalSceneScreen, Basic2DPlatformer.UI
-        m_MethodName: ExitGame
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &317031824
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -349,6 +340,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 317031820}
   m_CullTransparentMesh: 1
+--- !u!114 &317031826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 317031820}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea0d729942a27d24d818182f040732d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &367381018
 GameObject:
   m_ObjectHideFlags: 0
@@ -585,28 +588,14 @@ GameObject:
   m_Component:
   - component: {fileID: 1725879351}
   - component: {fileID: 1725879350}
-  - component: {fileID: 1725879349}
   - component: {fileID: 1725879348}
-  - component: {fileID: 1725879347}
   m_Layer: 0
-  m_Name: FinalUI
+  m_Name: UiRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1725879347
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1725879346}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8663eb1e277ab924da1e783a608265fb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1725879348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -624,29 +613,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &1725879349
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1725879346}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_UiScaleMode: 1
-  m_ReferencePixelsPerUnit: 100
-  m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1280, y: 720}
-  m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
-  m_PhysicalUnit: 3
-  m_FallbackScreenDPI: 96
-  m_DefaultSpriteDPI: 96
-  m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
 --- !u!223 &1725879350
 Canvas:
   m_ObjectHideFlags: 0

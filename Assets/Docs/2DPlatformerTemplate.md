@@ -1,5 +1,7 @@
 # 2D Platformer 模板规格
 
+> 本文是**构建期设计规格**,以中文维护;面向使用者的英文入口是 [ARCHITECTURE.EN.md](ARCHITECTURE.EN.md) / [EXTENDING.EN.md](EXTENDING.EN.md) / [Onboarding.EN.md](Onboarding.EN.md)。
+
 > 本次工作的**唯一**设计契约。所有旧 `README.md`/`CHANGELOG.md`/`PENDING_INSPECTOR.md` 已移除;文档改由 `Assets/Docs/` 集中承载(见 §9)。
 > 实现与本文件冲突时以本文件为准;变更先改本文件。
 > 语言:模板文档为**中英成对**(`NAME.md` 中文基准 + `NAME.EN.md` 英文)。
@@ -36,7 +38,12 @@
 ## 2. 全局约束
 
 - **写入方式**:Unity MCP 全权(场景 / 预制体 / SO / `.inputactions` / Package / ProjectSettings / Build Settings / `Assets/` 下任意文件)。
-- **既有代码**:默认不重写既有实现。**获授权的 Core 重构有两处**:`Core/SceneSwitch`(见 §5)与 `Core/Audio`(音量应用,见 §7.7);其余新增能力走新文件。
+- **既有代码**:默认不重写既有实现。已授权的重构:
+  - `Core/SceneSwitch`(§5)与 `Core/Audio` 音量应用(§7.7);
+  - `Character` 死亡语义拆分与 `Motor` 启停开关(§7.1);
+  - `Level`/`Contracts` 依赖反转与 `Portal` 状态机(§7.3);
+  - `UI` 组件化与 `UiPanel` 统一(§7.5)。
+  其余新增能力走新文件。
 - **目录**:子系统代码 `Assets/<Subsystem>/Scripts/`;工具 `Assets/Editor/`;文档 `Assets/Docs/`;共享资源 `Assets/{Scene,Visuals,Sounds}`,子系统资源 `Assets/<Subsystem>/{Prefabs,SO,Physics}`。
 - **代码风格**(沿用既有):一文件一类型、`public` / `[SerializeField] private` / `private` 显式访问词、property + backing field、`GameLog` 日志、`InitializeInternal` / `ResolveDependencies`。代码注释见 [CodeComments.md](CodeComments.md);文档**中英分成两份 `.md`**(中文基准)。
 
@@ -51,6 +58,8 @@ Assets/
     Subsystems/<Name>.md (+ .EN.md)
   Core/       Scripts/ · SO/ · Prefabs/
   Game/       Scripts/
+  Contracts/  Scripts/
+  Pooling/    Runtime/ · Tests/
   Character/  Scripts/ · SO/
   Player/     Scripts/ · Prefabs/ · Physics/
   Level/      Scripts/ · SO/
@@ -71,30 +80,33 @@ Assets/
 前缀 `Basic2DPlatformer`。**依赖严格单向、无环**:
 
 ```
-低层(无项目内依赖)      Infra、Game、Character
-Core    → { Infra, Game }
-Player  → { Core, Character }
-Level   → { Game, Character }
-UI      → { Core, Game, Level, Character }
-Editor  → 全部
+外部包(零项目依赖)      GrignardReagent.Pooling
+低层(无项目内依赖)      Contracts、Infra、Game、Character
+Core    → { Infra, Game, GrignardReagent.Pooling }
+Level   → { Game, Contracts }
+Player  → { Core, Character, Contracts }
+UI      → { Core, Game, Level, Player }
+Editor  → { Infra, Core, Game, UI }(传递可见全部)
 ```
 
 | 程序集 | 覆盖 | 主要引用 |
 | --- | --- | --- |
 | `Basic2DPlatformer.Infra` | `Assets/Infra/InputSystem`(生成物) | Unity.InputSystem |
-| `Basic2DPlatformer.Core` | `Assets/Core/Scripts` | **Infra、Game**、InputSystem、GameLog、Timer、NaughtyAttributes |
+| `Basic2DPlatformer.Core` | `Assets/Core/Scripts` | **Infra、Game、GrignardReagent.Pooling**、InputSystem、GameLog、Timer、NaughtyAttributes |
 | `Basic2DPlatformer.Game` | `Assets/Game/Scripts` | 无项目内引用(GameLog 为 DLL,自动引用) |
+| `Basic2DPlatformer.Contracts` | `Assets/Contracts/Scripts` | 无项目内引用 |
+| `GrignardReagent.Pooling` | `Assets/Pooling/Runtime` | 无项目内引用(独立包) |
 | `Basic2DPlatformer.Character` | `Assets/Character/Scripts` | 无项目内引用 |
-| `Basic2DPlatformer.Player` | `Assets/Player/Scripts` | Core、Character |
-| `Basic2DPlatformer.Level` | `Assets/Level/Scripts` | Game、Character |
-| `Basic2DPlatformer.UI` | `Assets/UI/Scripts` | Core、Game、Level、Character、TMP、UnityEngine.UI |
-| `Basic2DPlatformer.Editor` | `Assets/Editor`(Editor 平台限定) | 全部 + UnityEditor |
+| `Basic2DPlatformer.Player` | `Assets/Player/Scripts` | Core、Character、Contracts |
+| `Basic2DPlatformer.Level` | `Assets/Level/Scripts` | Game、Contracts |
+| `Basic2DPlatformer.UI` | `Assets/UI/Scripts` | Core、Game、Level、Player、TMP、UnityEngine.UI |
+| `Basic2DPlatformer.Editor` | `Assets/Editor`(Editor 平台限定) | `{Infra, Core, Game, UI}` + UnityEditor(传递可见全部) |
 
 **硬约束**:
 
 - 所有脚本都必须落在某个 asmdef 内,避免回退到 `Assembly-CSharp`。
 - 生成物 `PlayerControls.cs` 归属 `Infra` 程序集,**不手改**;每次改动后验证生成器仍正常。
-- 程序集落地**随子系统增量引入**(先 `Infra`/`Core`/`Game`/`Editor`,Player/Level/UI 落地时再加),避免引用尚不存在的程序集。
+- 程序集已全部落地;`Contracts` 是新增的零项目依赖层(§4)。新增程序集须在 `ARCHITECTURE.md` 登记并通过工具窗口的 `Validate`。
 
 > **实现时发现的既有循环耦合(已解决)**:`AudioManager`/`SceneSwitchManager`(Core)引用 `GameState`,而 `GameSettings`(Game)引用 `AudioSettings` —— 两者互为依赖,无法两立。因 `AudioSettings` 仅被 Game 使用、Core 自身不用,已将其从 `Core/Audio/Setting/` **迁入 `Game/Setting/`**(保留 GUID),从而确立 `Game` 为低层、`Core → Game` 的真实方向。故本规格 §4 的依赖方向与最早版本相反,以本节为准。
 
@@ -123,12 +135,13 @@ Editor  → 全部
 | # | 拓展 | 机制 | 是否碰共享文件 |
 | --- | --- | --- | --- |
 | ① 加场景/关卡 | 新建 `SceneDefinition` + 场景;编辑器工具一键注册 Build Settings | 否 |
-| ② 加可交互物 | 实现 `IInteractable`(`CanInteract` / `OnInteracted` / `Interact(InteractionDetails)`) | 否 |
-| ③ 加 UI 屏幕 | 新增 UI 脚本 + 预制体变体 | 否(接口在 UI 程序集) |
+| ② 加可交互物 | 实现 `IInteractable`(`CanInteract` / `OnInteracted` / `Interact(InteractionDetails)`,Contracts) | 否 |
+| ③ 加 UI 屏幕 | 新增 `UiPanel` 面板 + 按钮组件/屏幕脚本 | 否(接口在 Contracts/UI) |
 | ④ 加输入动作 | **编辑器工具**改 `.inputactions` 并触发重生成 + 追加 `InputManager` 事件 | 是(工具托管,Phase 2) |
-| ⑤ 加玩家能力/组件 | 新增组件 + Player 预制体**变体**,不改主预制体 | 否 |
+| ⑤ 加玩家能力/组件 | 新增组件 + Player 预制体**变体**,不改主预制体;死亡经 `IKillable` | 否 |
 | ⑥ 加数据型 SO | SO 生成器(Phase 2) | 否 |
 | ⑦ 加新 Subsystem | 目录 + asmdef + `ARCHITECTURE.md` 登记 | 是(登记) |
+| ⑧ 加项目级契约 | 接口/载荷会被多个程序集使用 → 放 `Contracts` | 是(登记) |
 
 ---
 
@@ -138,12 +151,13 @@ Editor  → 全部
 
 移植剥离 PluggerHead:
 
-- `Motor`(Character 子系统):拥有 Rigidbody2D,收意图(`SetMoveX`/`Jump`/`SetJumpHeld`),由物理事实推出 `MovementState`;`LockControl` 供交互锁定;可整体 `enabled=false` 移交物理。
+- `Motor`(Character 子系统):拥有 Rigidbody2D,收意图(`SetMoveX`/`Jump`/`SetJumpHeld`),由物理事实推出 `MovementState`;`LockHorizontal` 供交互锁定;`Activate`/`Deactivate` 是唯一的启停入口(内部即 `enabled`);**不含死亡语义**。
 - `CharacterMovementConfigs`(SO,几何量):`moveSpeed`/`jumpHeight`/`timeToApex`/`fallGravityMult`/`coyoteTime`/`jumpBuffer`/`variableJumpCutoff`;重力由 `Physics2D.gravity` 与推导值决定。
-- `CharacterAnimationView`(Character):观察 `StateChanged`/朝向驱动 Animator;`TryPlayInteract` 播交互动画,动画事件回调解锁;不查询 Animator。
+- `CharacterAnimationView`(Character):观察 `StateChanged`/朝向驱动 Animator;`TryPlayInteract` 播交互动画,动画事件回调解锁;`PlayDeath` 供 `PlayerDeath` 调用;不查询 Animator。
 - `PlayerController`(Player):读 Core 输入 → 调 Motor 意图 API。
-- `PlayerInteraction`(Player):接收 `Interact`(F),处理 `IInteractable`;成功后 `Motor.LockControl(true)`。
-- `PlayerAnimationAudio`(Player):动画事件 → Core 音频。
+- `PlayerInteraction`(Player):接收 `Interact`(F),处理 `IInteractable`(Contracts);成功后 `Motor.LockHorizontal(true)`。
+- `PlayerAnimationAudio`(Player):动画事件 → Core 音频;移动音效在 `PlayerDeath.IsDead` 时跳过。
+- `PlayerDeath`(Player):实现 Contracts 的 `IKillable`;`Kill()` 关物理、停运动、播死亡动画并广播 `PlayerDied`。
 - 交互键 **F**。
 
 ### 7.2 Camera(`Basic2DPlatformer.Core` 用户)
@@ -154,26 +168,33 @@ Editor  → 全部
 ### 7.3 Level(`Basic2DPlatformer.Level`)
 
 - `ILevelGoal.cs`:通关条件被动契约(`bool Fulfilled` + `event Changed`)。
-- `LevelGoal.cs`:终点 Trigger,玩家进入 → `Fulfilled=true` + 广播 `Changed`。
+- `IKillable.cs`(Contracts):环境可杀死对象的命令契约(`void Kill()`);Level **不依赖** Character/Player。
+- `EnvironmentFacade.cs`:环境唯一入口,暴露 `LevelManager`(放在 `SceneRoot`,与 `LevelManager` 同 GO)。
+- `LevelGoal.cs`:终点 Trigger,**用 `Player` 标签**识别玩家;进入 → `Fulfilled=true` + 广播 `Changed`。
 - `LevelGoalAndOperator.cs` / `LevelGoalOrOperator.cs`:组合条件(全部 / 任一达成),自身也实现 `ILevelGoal`。
 - `LevelManager.cs`:场景本地门面,持有 `rootCondition`;满足时广播一次 `LevelCleared`。
-- `Hazard.cs`:危险 Trigger → 调用 `Motor.Die()`。
+- `Hazard.cs`:危险 Trigger → `GetComponentInParent<IKillable>()?.Kill()`。
+- `LevelProgressTracker.cs`:与 `LevelManager` 同 GO,未连线时 `GetComponent`。
 - `MovingPlatform.cs`:kinematic 刚体往返,把自身位移带给站在上面的刚体(最小实现)。
-- `Portal.cs`:刚体进入触发区即移动到目标点(最小实现)。
+- `Portal.cs` / `PortalState.cs`:传送门;只有 `Active`(蓝)能作为入口发送,`Cooldown`(黄)/`Inactive`(红)不能发送但仍可接收。`exit` 是 `Portal` 类型;入口传送后对出口调用 `ActivatePortal(false)`(单向)或 `PortalCooldown()`(双向冷却)。
 
 ### 7.4 Game(`Basic2DPlatformer.Game`)
 
 - `GameStateManager` / `GameState`:**不动**(无 owner 冻结接口)。
 - `AudioSettings` 已由 `Core/Audio/Setting/` 迁入此处(见 §4)。
-- 新增 `FreezeCoordinator.cs`(静态,owner 集合,自动清除已销毁 owner)+ `FreezeWhileVisible.cs`。
+- 新增 `FreezeCoordinator.cs`(静态,owner 集合,自动清除已销毁 owner);原 `FreezeWhileVisible.cs` 已移除,面板冻结改由 UI 的 `UiPanel` 发起。
 - Progress:`GameProgress`/`LevelProgressStore` 放 Game;`LevelProgressTracker` **放 Level**(订阅同程序集的 `LevelManager`,避免 Game→Level 反向依赖);`LevelCount = 1`。
 - Setting:既有 5 文件不动。
 
 ### 7.5 UI(`Basic2DPlatformer.UI`)
 
-- `MainMenuScreen` / `SettingsScreen` / `DeathScreen` / `NextLevelScreen` / `FinalSceneScreen` / `SelectableAudio`。
-- 文案改**英文占位**;`SelectableAudio` 音效复用 `AudioId.MouseClick`(不改 `AudioId`)。
-- `SettingsScreen` 仅持久化音量(不调 `ApplyAudioSettings`,留 TODO)。
+- 面板统一挂 `UiPanel`(显隐 + 焦点还原 + 可选冻结);按钮行为由 `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton` 携带数据完成。
+- `SettingsScreen` 只管音量存取与保存后应用;`NextLevelScreen` 通过 `EnvironmentFacade.Level` 订阅 `LevelCleared`;`DeathScreen` 订阅 `PlayerDeath.PlayerDied`;两者都只把事件接到 `UiPanel.Open()`。
+- 主菜单与结算不再有专属屏幕脚本;`MainMenuScreen` / `FinalSceneScreen` 已删除。
+- `UI → Player`(死亡事件)与 `UI → Level`(环境门面);不再直接依赖 `Character`。
+- 文案为**英文占位**;`SelectableAudio` 音效复用 `AudioId.MouseClick`(不改 `AudioId`),并覆盖悬停/提交。
+- `SettingsScreen` 保存成功后调用 `ApplyAudioSettings` 立即生效(见 §7.7)。
+- 面板默认未激活;**不要直接 `SetActive`**。
 - **死亡预留接口(仅 C# 事件)**:
 
   ```csharp
@@ -184,7 +205,7 @@ Editor  → 全部
   }
   ```
 
-  模板只负责 `Died → 显示面板 → 冷冻`;`Confirm` 后做什么不预设。
+  模板只负责 `PlayerDied → 显示面板 → 冷冻`;`Confirm` 后做什么不预设。
 
 ### 7.6 数据型 SO
 
@@ -204,7 +225,7 @@ Editor  → 全部
 
 单一窗口 `Tools/Basic2DPlatformer/Project`:
 
-- **Phase 1(先做)**:场景/关卡 —— 列出全部 `SceneDefinition`、一键注册 Build Settings、打开场景、校验(空引用、场景缺失、未注册、重复 Id)。
+- **Phase 1(先做)**:场景/关卡 —— 列出全部 `SceneDefinition`、一键注册 Build Settings、打开场景、校验(空引用、场景缺失、未注册、重复 Id、**asmdef 依赖边**、**UI 必填引用**)。
 - **Phase 2(已实现)**:输入动作(增删 action/binding,写回 `.inputactions` 并触发 `PlayerControls.cs` 重生成)、Tag/Layer(查看 + 新增)、**SO 定义生成器**(生成 `XxxConfigs` 脚本 + `[CreateAssetMenu]` + 默认资产)。
 
 > SO 生成器**放在模板自带 Editor 工具**;已移除外部 `MenuTool` 依赖。
@@ -214,10 +235,10 @@ Editor  → 全部
 ## 9. 文档机制
 
 - 位置:`Assets/Docs/`(全部集中);子系统文档 `Assets/Docs/Subsystems/<Name>.md`。
-- 命名:`NAME.md` = 中文(**基准**),`NAME.EN.md` = 英文;两份**全部成对**;英文落后时以中文为准。
+- 命名:`NAME.md` = 中文(**基准**),`NAME.EN.md` = 英文;两份**全部成对**;英文落后时以中文为准。例外:本文以中文维护,英文入口见文首。
 - 简单版内容:`AGENTS.md`、`ARCHITECTURE.md`(子系统 + 拓展点)、`EXTENDING.md`、每子系统一份 README。
 - `AGENTS.md` 承载:分工与写入边界、代码/文档规范、**版本控制流程**(含 Smart Merge 与 LFS onboarding)、**一人一场景/预制体 owner**纪律、交付流程。
-- **暂不做任何强制**(纯文档约定);预留"编辑器校验器"接口,Phase 2 可接入。
+- **暂不做任何强制**(纯文档约定);工具窗口的 `Validate` 已校验 asmdef 依赖边与 UI 必填引用,其余仍靠评审。
 - ⚠️ 注意:AI 代理通常只自动发现**仓库根或工作区根**的 `AGENTS.md`,`Assets/Docs/AGENTS.md` 可能不被自动读取。建议在仓库根放一个**指针 stub**(指向 `Assets/Docs/AGENTS.md`),此项待你确认。
 
 ---
@@ -292,7 +313,7 @@ Editor  → 全部
 
 - **协作**:新成员按 `AGENTS.md` 可完成 onboarding(Smart Merge 脚本、owner 规则);加一个场景只需"建场景 + 建 `SceneDefinition`",编辑器工具一键注册,**不碰任何共享代码文件**。
 - **玩法**:`MainMenu → SampleLevel`,A/D 移动、Space 跳跃(几何参数手感)、F 交互;相机跟随并受边界限制;踩 `Hazard` → 死亡面板 + 冷冻;可乘坐水平 `MovingPlatform`;走进 `Portal` 传送;收集全部 3 个目标(`LevelGoalAndOperator` 达成 → `LevelManager.LevelCleared`)→ 下一关面板 → `Final`;暂停/设置可开关、冻结/解冻正确、音量可保存。
-- **构建**:程序集单向依赖、控制台无报错。
+- **构建**:程序集单向依赖、`Contracts` 零项目依赖、控制台无报错。
 
 ---
 
@@ -300,4 +321,5 @@ Editor  → 全部
 
 - TODO: 进度持久化。
 - TODO: 测试程序集。
+- TODO: `GrignardReagent.Pooling` 抽成独立 UPM 包(当前为项目内 asmdef,已有 EditMode 测试)。
 - TODO: LFS 按项目启用(说明在 AGENTS)。
