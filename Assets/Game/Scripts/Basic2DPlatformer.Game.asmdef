@@ -1,7 +1,9 @@
 {
     "name": "Basic2DPlatformer.Game",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "Basic2DPlatformer.Contracts"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

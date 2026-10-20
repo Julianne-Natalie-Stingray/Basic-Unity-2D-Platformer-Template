@@ -45,7 +45,7 @@
       "dependencies": {
         "com.grignardreagent.gamelog": "1.1.0"
       },
-      "hash": "621fd79a7a11fdacff84f963a8fdc3c2b2fa7a78"
+      "hash": "83f84fbc47ee3cf46e6badd555e04e04bb2bbe67"
     },
     "com.unity.2d.animation": {
       "version": "9.1.1",

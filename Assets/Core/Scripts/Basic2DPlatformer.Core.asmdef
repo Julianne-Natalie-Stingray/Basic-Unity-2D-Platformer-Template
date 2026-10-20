@@ -4,6 +4,7 @@
     "references": [
         "Basic2DPlatformer.Infra",
         "Basic2DPlatformer.Game",
+        "Basic2DPlatformer.Contracts",
         "GrignardReagent.Pooling",
         "Unity.InputSystem",
         "NaughtyAttributes.Core",

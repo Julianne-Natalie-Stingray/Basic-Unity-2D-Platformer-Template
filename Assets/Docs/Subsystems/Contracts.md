@@ -1,27 +1,61 @@
-# Contracts 层
+# Contracts 子系统
 
-> English: [Contracts.EN.md](Contracts.EN.md)。返回 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+## 子系统功能
 
-## 职责
+承载跨程序集接口与纯数据；不负责实现与运行时状态。
 
-承载会被**多个互不相关的程序集**实现或消费的接口与数据载荷。零项目依赖,不引用任何 `Basic2DPlatformer.*`。
+## 依赖的子系统及具体依赖业务
 
-## 组成
+暂无。
 
-| 路径 | 类型 | 职责 |
-| --- | --- | --- |
-| `IInteractable.cs` | interface | 场景可交互契约(`CanInteract` / `OnInteracted` / `Interact`) |
-| `InteractionDetails.cs` | class | 交互载荷(`Actor` / `Target`);随 `IInteractable` 同层 |
-| `IKillable.cs` | interface | 环境可杀死对象契约(`Kill`) |
+## API
 
-## 规则
+### 字段
 
-- 一个类型若被另一程序集的签名使用,必须位于该程序集之下;接口与其载荷同层。
-- `Contracts` 不得引用任何 `Basic2DPlatformer.*`;不放 `MonoBehaviour`(只放接口/纯数据)。
-- 只在单一程序集内使用、或只被上层以具体类型使用的类型,留在原子系统。
-- 新增契约后运行工具窗口的 `Validate`(校验 asmdef 边)。
+- `InteractionDetails.Actor` / `Target`：交互双方。
+- `IInteractable.CanInteract`：可交互条件。
+- `ISaveContributor.Key`：存档 section 标识。
 
-## 归属
+### 事件
 
-- `Player` 实现 `IKillable`;`Level` 调用 `IKillable`。
-- `Player` 消费 `IInteractable`;任意玩法程序集可实现 `IInteractable`。
+- `IInteractable.OnInteracted`：交互完成。
+
+### 公共方法
+
+- `IInteractable.Interact`：执行交互。
+- `IKillable.Kill`：请求死亡。
+- `ISaveContributor.CanCapture` / `Capture` / `Restore`：存档快照。
+
+## 注意事项
+
+### 总则
+
+- 零项目依赖；只放接口与纯数据。
+- 接口与其载荷同层。
+- 新增契约后运行 `Validate`。
+
+### Player
+
+- 实现 `IKillable`；消费 `IInteractable`。
+
+### Level
+
+- 调用 `IKillable`。
+
+### Game
+
+- 消费 `ISaveContributor`。
+
+## 内容
+
+```text
+Contracts/
+  Scripts/
+    Basic2DPlatformer.Contracts.asmdef — 程序集边界
+    Interfaces/
+      IInteractable.cs — 交互契约
+      IKillable.cs — 死亡契约
+      ISaveContributor.cs — 存档契约
+    Payloads/
+      InteractionDetails.cs — 交互载荷
+```

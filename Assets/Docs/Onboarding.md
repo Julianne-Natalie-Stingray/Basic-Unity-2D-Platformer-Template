@@ -1,8 +1,7 @@
 # 上手指引 (Onboarding)
 
-> 面向两类人:① 在既有项目里上手的协作者;② 从模板派生新项目的人。English: [Onboarding.EN.md](Onboarding.EN.md)
+> 面向两类人:① 在既有项目里上手的协作者;② 从模板派生新项目的人。
 > 相关文档:[AGENTS.md](AGENTS.md)(协作契约)、[ARCHITECTURE.md](ARCHITECTURE.md)(结构/程序集)、[EXTENDING.md](EXTENDING.md)(怎么加东西)、[CodeComments.md](CodeComments.md)(注释规范)。
-> 注:模板仍在开发中;[2DPlatformerTemplate.md](2DPlatformerTemplate.md) 是**构建期设计规格**,"上手"不必读它。
 
 ---
 
@@ -11,7 +10,7 @@
 - Unity 版本:**2022.3.43f1c1**(见 `ProjectSettings/ProjectVersion.txt`)。
 - 包来源(`Packages/manifest.json`):
   - 引擎包:`com.unity.feature.2d`、`com.unity.inputsystem`(1.7.0)、`com.unity.cinemachine`(2.10.3)、`com.unity.textmeshpro` 等。
-  - 第三方(git URL,克隆即得):`com.dbrizov.naughtyattributes`(2.1.6)、`com.grignardreagent.gamelog`、`com.grignardreagent.timer`。
+  - 第三方(git URL,克隆即得):`com.dbrizov.naughtyattributes`(2.1.6)、`com.grignardreagent.gamelog`、`com.grignardreagent.pooling`、`com.grignardreagent.timer`。
   - 开发/AI 工具(**可选**,后续可能移除):`com.coplaydev.unity-mcp`。
 - **首次打开**:让 Unity 解析包(联网拉取 git 包)→ 等编译完成 → 确认 Console 无报错。
 - 缺包:检查 git URL 是否可访问,再重新解析。
@@ -26,15 +25,14 @@
 ## 3. 工程结构
 
 - 子系统:`Core` / `Game` / `Contracts` / `Character` / `Player` / `Level` / `UI` / `Editor` / `Infra`。
-- 对象池 `GrignardReagent.Pooling` 是独立 asmdef(计划抽 UPM),不依赖项目程序集。
 - 代码在 `Assets/<Subsystem>/Scripts/`;资源随子系统(`SO/`/`Prefabs/`/`Physics/`)或按格式(`Scene/`/`Visuals/`/`Sounds/`)。
 - 程序集边界与依赖方向见 [ARCHITECTURE.md](ARCHITECTURE.md);**所有脚本必须落在某个 asmdef 内**。
 
 ## 4. 运行与验收
 
-- 打开 `Assets/Scene/Samples/MainMenu.unity` 播放 → 主菜单 → New Game 进入 `SampleLevel`。
+- 打开 `Assets/Scene/Samples/MainMenu.unity` 播放 → 主菜单 → New Game(清档)或 Continue(读档)进入 `SampleLevel`。
 - 或直接播放 `Assets/Scene/Samples/SampleLevel.unity`。
-- 闭环:移动/跳跃/交互;**收集全部 3 个目标** → 通关面板 → `Final`;踩 `Hazard` → 死亡面板;可乘坐水平移动平台、走进传送门。
+- 闭环:移动/跳跃/交互;右上角 Menu → PausePanel → Save;Resume 返回游戏;**收集全部 3 个目标** → 通关面板 → `Final`;踩 `Hazard` → 死亡面板;可乘坐水平移动平台、走进传送门(单向/冷却状态)。
 - Build Settings:`MainMenu(0)` / `SampleLevel(1)` / `Final(2)`;新场景用工具窗口一键注册。
 
 ## 5. 常见任务
@@ -102,14 +100,15 @@ git config --get merge.unityyamlmerge.driver
 
 ### 8.5 目录树
 
-- [ ] `Assets/` 顶层含:`Docs/ Core/ Game/ Character/ Player/ Level/ UI/ Editor/ Infra/ Scene/ Visuals/ Sounds/`。
-- [ ] 每个子系统含 `Scripts/`;`Scene/Samples/` 含 `MainMenu / SampleLevel / Final`。
+- [ ] `Assets/` 顶层含:`Docs/ Core/ Game/ Contracts/ Pooling/ Character/ Player/ Level/ UI/ Editor/ Infra/ Scene/ Visuals/ Sounds/`。
+- [ ] 每个子系统含 `Scripts/`;`Pooling/` 用 `Runtime/`;`Scene/Samples/` 含 `MainMenu / SampleLevel / Final`。
 
 ### 8.6 最小游戏流程
 
 播放 `Assets/Scene/Samples/MainMenu.unity`:
 
-- [ ] 主菜单 → **New Game** → 进入 `SampleLevel`。
+- [ ] 主菜单 → **New Game** → 进入 `SampleLevel`;暂停菜单 **Save** 后返回主菜单,**Continue** 可读档进入。
+- [ ] 右上角 **Menu** 打开暂停面板并冻结;**Resume** 解冻。
 - [ ] `A/D` 移动、`Space` 跳跃;相机跟随且受边界限制。
 - [ ] 收集全部 3 个目标 → 出现通关面板 → **Next** → `Final`。
 - [ ] 踩 `Hazard` → 出现死亡面板。

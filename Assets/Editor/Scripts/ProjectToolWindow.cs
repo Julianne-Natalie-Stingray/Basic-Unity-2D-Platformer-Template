@@ -248,15 +248,17 @@ public class ProjectToolWindow : EditorWindow
         Dictionary<string, string[]> expected = new()
         {
             ["Basic2DPlatformer.Infra"] = new string[0],
-            ["Basic2DPlatformer.Game"] = new string[0],
+            ["Basic2DPlatformer.Game"] = new[]
+            {
+                "Basic2DPlatformer.Contracts"
+            },
             ["Basic2DPlatformer.Character"] = new string[0],
             ["Basic2DPlatformer.Contracts"] = new string[0],
-            ["GrignardReagent.Pooling"] = new string[0],
-            ["GrignardReagent.Pooling.Tests"] = new[] { "GrignardReagent.Pooling" },
             ["Basic2DPlatformer.Core"] = new[]
             {
                 "Basic2DPlatformer.Infra",
                 "Basic2DPlatformer.Game",
+                "Basic2DPlatformer.Contracts",
                 "GrignardReagent.Pooling"
             },
             ["Basic2DPlatformer.Level"] = new[]
@@ -283,6 +285,11 @@ public class ProjectToolWindow : EditorWindow
                 "Basic2DPlatformer.Core",
                 "Basic2DPlatformer.Game",
                 "Basic2DPlatformer.UI"
+            },
+            ["Basic2DPlatformer.Tests.EditMode"] = new[]
+            {
+                "Basic2DPlatformer.Game",
+                "Basic2DPlatformer.Contracts"
             }
         };
 

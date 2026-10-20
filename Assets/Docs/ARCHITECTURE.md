@@ -1,6 +1,6 @@
 # 架构
 
-> 本文档描述模板的系统划分、程序集边界与拓展点。English: [ARCHITECTURE.EN.md](ARCHITECTURE.EN.md)
+> 本文档描述模板的系统划分、程序集边界与拓展点。
 > 设计规格的完整推导见 [2DPlatformerTemplate.md](2DPlatformerTemplate.md)。
 
 ## 1. 程序集边界
@@ -16,8 +16,9 @@
 
 ```
 外部包(零项目依赖)   GrignardReagent.Pooling
-低层(无项目内依赖)   Contracts、Infra、Game、Character
-Core    → { Infra, Game, GrignardReagent.Pooling }
+低层(无项目内依赖)   Contracts、Infra、Character
+Game    → { Contracts }
+Core    → { Infra, Game, Contracts, GrignardReagent.Pooling }
 Level   → { Game, Contracts }
 Player  → { Core, Character, Contracts }
 UI      → { Core, Game, Level, Player }
@@ -27,31 +28,31 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 | 程序集                           | 覆盖                         | 职责                    |
 | ----------------------------- | -------------------------- | --------------------- |
 | `Basic2DPlatformer.Infra`     | `Assets/Infra`             | 生成的输入包装;**不手改**       |
-| `Basic2DPlatformer.Game`      | `Assets/Game/Scripts`      | 全局状态、设置数据、进度          |
-| `Basic2DPlatformer.Contracts` | `Assets/Contracts/Scripts` | 跨程序集契约(`IInteractable`/`InteractionDetails`/`IKillable`) |
-| `GrignardReagent.Pooling`     | `Assets/Pooling/Runtime`   | 组件池(`ComponentPool<T>` / `GameObjectPool`);独立包,不依赖项目程序集 |
-| `Basic2DPlatformer.Core`      | `Assets/Core/Scripts`      | 输入 / 音频 / 场景切换 / 对象池  |
+| `Basic2DPlatformer.Game`      | `Assets/Game/Scripts`      | 全局状态、设置数据、进度、存档编排 |
+| `Basic2DPlatformer.Contracts` | `Assets/Contracts/Scripts` | 跨程序集契约(`IInteractable`/`InteractionDetails`/`IKillable`/`ISaveContributor`) |
+| `GrignardReagent.Pooling`     | UPM 包(`Packages/manifest.json`) | 组件池(`ComponentPool<T>` / `GameObjectPool`);独立包,不依赖项目程序集 |
+| `Basic2DPlatformer.Core`      | `Assets/Core/Scripts`      | 输入 / 音频 / 场景切换 / 存档宿主;对象池经 `GrignardReagent.Pooling` |
 | `Basic2DPlatformer.Character` | `Assets/Character/Scripts` | 角色运动机制、运动状态、运动参数、动画视图 |
 | `Basic2DPlatformer.Player`    | `Assets/Player/Scripts`    | 输入控制器、交互、动画音频、死亡状态(`PlayerDeath`) |
 | `Basic2DPlatformer.Level`     | `Assets/Level/Scripts`     | 环境门面、通关条件、危险区、移动平台、传送门 |
 | `Basic2DPlatformer.UI`        | `Assets/UI/Scripts`        | 面板、按钮组件、屏幕;订阅 `PlayerDied` 与 `LevelCleared` |
 | `Basic2DPlatformer.Editor`    | `Assets/Editor`            | 编辑器工具与校验(Editor 平台限定) |
 
-> 注意:`Core → Game`(而非相反)——`AudioManager`/`SceneSwitchManager` 依赖 `GameState`。`AudioSettings` 因此位于 `Game/Setting/`。
+> 注意:`Core → Game`(而非相反)——`AudioManager`/`SceneSwitchManager` 依赖 `GameState`。`AudioSettings` 因此位于 `Game/Setting/`。`Game → Contracts` 只为 `ISaveContributor`;`Contracts` 仍零项目依赖。
 
 ## 2. 子系统
 
 | 子系统       | 位置                         | 职责                                                                                                                                     |
 | --------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Infra     | `Assets/Infra`             | 生成物:`PlayerControls`                                                                                                                   |
-| Core      | `Assets/Core/Scripts`      | `CoreFacade`,输入、音频、场景切换、对象池                                                                                                            |
-| Game      | `Assets/Game/Scripts`      | `GameStateManager`,Setting 存储,Progress                                                                                                 |
-| Contracts | `Assets/Contracts/Scripts` | 跨程序集契约:`IInteractable`、`InteractionDetails`、`IKillable`                                                                                |
-| Pooling   | `Assets/Pooling/Runtime`   | `ComponentPool<T>` / `GameObjectPool`;独立 asmdef,不依赖项目程序集 |
+| Core      | `Assets/Core/Scripts`      | `CoreFacade`,输入、音频、场景切换、`SaveService`;对象池经 `GrignardReagent.Pooling` |
+| Game      | `Assets/Game/Scripts`      | `GameStateManager`,Setting 存储,Progress,`SaveSystem`/`GameSaveStore`                                                                     |
+| Contracts | `Assets/Contracts/Scripts` | 跨程序集契约:`IInteractable`、`InteractionDetails`、`IKillable`、`ISaveContributor`                                                               |
+| Pooling   | UPM 包 | `ComponentPool<T>` / `GameObjectPool`;独立 asmdef,不依赖项目程序集 |
 | Character | `Assets/Character/Scripts` | `Motor`、`MovementState`、`CharacterMovementConfigs`、`CharacterAnimationView`                                                            |
 | Player    | `Assets/Player/Scripts`    | `PlayerController`(输入→Motor)、`PlayerInteraction`、`PlayerAnimationAudio`、`PlayerDeath`(实现 `IKillable`,广播 `PlayerDied`) |
-| Level     | `Assets/Level/Scripts`     | `EnvironmentFacade`、`IKillable`、通关条件(`ILevelGoal`/`LevelGoalAndOperator`/`LevelGoalOrOperator`/`LevelManager`)、终点、危险区 |
-| UI        | `Assets/UI/Scripts`        | `UiPanel`, button components (scene switch / open panel / quit), `SettingsScreen`, `NextLevelScreen`, `DeathScreen`, `SelectableAudio` |
+| Level     | `Assets/Level/Scripts`     | `EnvironmentFacade`、通关条件(`ILevelGoal`/`LevelGoalAndOperator`/`LevelGoalOrOperator`/`LevelManager`)、终点、危险区 |
+| UI        | `Assets/UI/Scripts`        | `UiPanel`、按钮组件(场景切换 / 开面板 / 退出 / New Game / Continue / Save)、`SettingsScreen`、`NextLevelScreen`、`DeathScreen`、`SelectableAudio` |
 | Editor    | `Assets/Editor`            | 项目工具窗口、自定义 Inspector                                                                                                                   |
 
 各子系统细节见 [Subsystems/](Subsystems/)。
@@ -82,4 +83,4 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 
 - 所有脚本必须落在某个 asmdef 内,禁止回退到 `Assembly-CSharp`。
 - 生成物(`PlayerControls.cs`)不手改。
-- 文档中英成对、中文基准;代码注释见 [CodeComments.md](CodeComments.md)。
+- 文档以中文维护;代码注释见 [CodeComments.md](CodeComments.md)。

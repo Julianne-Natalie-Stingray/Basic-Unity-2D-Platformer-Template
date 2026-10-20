@@ -9,6 +9,7 @@ using UnityEngine;
 [RequireComponent(typeof(AudioManager))]
 [RequireComponent(typeof(TimerRunner))]
 [RequireComponent(typeof(SceneSwitchManager))]
+[RequireComponent(typeof(SaveService))]
 [DisallowMultipleComponent]
 public class CoreFacade : MonoBehaviour
 {
@@ -18,10 +19,12 @@ public class CoreFacade : MonoBehaviour
     public InputManager Input => input;
     public AudioManager Audio => audios;
     public SceneSwitchManager SceneSwitch => sceneSwitch;
+    public SaveService Save => save;
 
     private InputManager input;
     private AudioManager audios;
     private SceneSwitchManager sceneSwitch;
+    private SaveService save;
 
     private void Awake()
     {
@@ -54,5 +57,8 @@ public class CoreFacade : MonoBehaviour
 
         if (!sceneSwitch)
             sceneSwitch = GetComponent<SceneSwitchManager>();
+
+        if (!save)
+            save = GetComponent<SaveService>();
     }
 }

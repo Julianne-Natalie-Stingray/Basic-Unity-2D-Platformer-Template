@@ -1,38 +1,91 @@
 # Level 子系统
 
-> English: [Level.EN.md](Level.EN.md)。返回 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+## 子系统功能
 
-## 职责
+负责关卡规则与环境门面；不负责角色、输入与存档文件。
 
-Level 拥有环境侧的规则与对外的唯一入口:通关条件、危险区、移动平台、传送门,以及"环境可以杀死什么"的契约。它**不依赖** Character/Player,通过 `IKillable` 反转依赖。
+## 依赖的子系统及具体依赖业务
 
-## 组成
+- Game：写入通关进度。
+- Contracts：`IKillable` 反转死亡依赖。
 
-| 路径 | 类型 | 职责 |
-| --- | --- | --- |
-| `EnvironmentFacade.cs` | MonoBehaviour | 环境唯一入口;暴露 `LevelManager` |
-| `ILevelGoal.cs` | interface | 通关条件被动契约 |
-| `LevelGoal.cs` | MonoBehaviour | 终点触发器;用 `Player` 标签识别玩家 |
-| `LevelGoalAndOperator.cs` / `LevelGoalOrOperator.cs` | MonoBehaviour | 条件组合(全部 / 任一) |
-| `LevelManager.cs` | MonoBehaviour | 根条件门面;广播 `LevelCleared` |
-| `Hazard.cs` | MonoBehaviour | 危险区;调用 `IKillable.Kill()` |
-| `Portal.cs` / `PortalState.cs` | MonoBehaviour / enum | 传送门:只有 `Active` 能发送;单向锁与出口冷却由入口调用出口 |
-| `LevelProgressTracker.cs` | MonoBehaviour | 通关写入进度 |
-| `MovingPlatform.cs` / `Portal.cs` | MonoBehaviour | 关卡机关 |
+## API
 
-## 公共 API
+### 字段
 
-- `EnvironmentFacade.Level` —— 本场景的 `LevelManager`。
-- `LevelManager.IsCleared` / `LevelCleared`。
-- `ILevelGoal.Fulfilled` / `Changed`。
-- `Portal.State` / `ActivatePortal(bool)` / `PortalCooldown()`。
+- `EnvironmentFacade.Level`：关卡门面。
+- `LevelManager.IsCleared`：通关状态。
+- `ILevelGoal.Fulfilled`：条件满足。
+- `Portal.State`：传送门状态。
 
-> `IKillable` 属于 **Contracts** 程序集;Level 通过它反转对 Player 的依赖。
+### 事件
 
-## 注意
+- `LevelManager.LevelCleared`：通关广播。
+- `ILevelGoal.Changed`：条件变化。
 
-- **死亡表现归 Player**(`PlayerDeath`);Level 只负责触发,不碰 `Motor`。
-- `LevelGoal` 用 `Player` 标签识别玩家;玩家根节点必须带该标签,且 Collider2D 在根上。
-- `EnvironmentFacade` 与 `LevelManager` 同 GO(`SceneRoot`);新增关卡场景要一并放置。
-- `Level` 的 asmdef 只引用 `Game` 与 `Contracts`;新增对角色/玩家的直接引用意味着方向错了。
-- `Portal`:`Active` 才能作为入口发送;`Cooldown`(黄)与 `Inactive`(红)不能发送,但**仍可作为出口接收**。入口传送后:出口是单向门(`oneWayPortal`)时调用 `ActivatePortal(false)` 锁死;双向门调用 `PortalCooldown()` 闪黄 `cooldownTime` 秒后回到 `Active`(蓝)。
+### 公共方法
+
+- `Portal.ActivatePortal` / `PortalCooldown`：状态切换。
+
+## 注意事项
+
+### 总则
+
+- 不依赖 Character/Player；死亡经 `IKillable`。
+- `LevelGoal` 用 `Player` 标签识别玩家。
+- `SceneRoot` 同挂 `LevelManager` 与 `EnvironmentFacade`。
+- `levelId` 是稳定存档 id；场景改名不变。
+- 机关状态不写入当前存档。
+- 仅 `Active` 可发送；`Cooldown` / `Inactive` 可接收。
+- 单向出口 `ActivatePortal(false)`；双向出口 `PortalCooldown`。
+
+### Game
+
+- `LevelProgressTracker` 写 `GameProgress`。
+- 不读写存档文件。
+
+### Contracts
+
+- `Hazard` 调用 `IKillable.Kill`。
+- 不直接引用 Player。
+
+## 内容
+
+```text
+Level/
+  SO/
+    GroundTile.asset — 地面瓦片
+  Scripts/
+    Basic2DPlatformer.Level.asmdef — 程序集边界
+    Devices/
+      Hazard.cs — 危险区
+      MovingPlatform.cs — 移动平台
+      Portal.cs — 传送门
+      PortalState.cs — 传送门状态
+    Goals/
+      ILevelGoal.cs — 条件契约
+      LevelGoal.cs — 终点条件
+      LevelGoalAndOperator.cs — 全部条件
+      LevelGoalOrOperator.cs — 任一条件
+    Persistent/
+      EnvironmentFacade.cs — 环境门面
+      LevelManager.cs — 通关管理
+      LevelProgressTracker.cs — 进度写入
+```
+
+## 实现思路
+
+### 代码架构
+
+门面 + 条件组合 + 传送门状态机。
+
+### 使用的范式
+
+组合、事件、状态机。
+
+### 内部方法 / 字段 / 事件
+
+- `Portal.cooldown`：冷却协程。
+- `Portal.exit`：出口门。
+- `LevelManager.rootCondition`：根条件。
+- `LevelProgressTracker.levelId`：稳定 id。

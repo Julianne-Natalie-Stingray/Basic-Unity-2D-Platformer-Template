@@ -1,7 +1,7 @@
 # AGENTS —— 团队协作契约
 
 > 本文件是本工程(由 2D Platformer 模板派生)的协作契约。AI 代理习惯读取仓库根的 `AGENTS.md`,那里是指向本文件的指针。
-> English: [AGENTS.EN.md](AGENTS.EN.md) · 新成员先看 [Onboarding.md](Onboarding.md)。
+> 新成员先看 [Onboarding.md](Onboarding.md)。
 
 ## 1. 分工与权限
 
@@ -20,8 +20,6 @@
 ## 3. 文档规范
 
 - 所有文档集中在 `Assets/Docs/`;子系统文档在 `Assets/Docs/Subsystems/<Name>.md`。
-- 每份文档成对:`NAME.md`(中文,**基准**)+ `NAME.EN.md`(英文)。英文落后时以中文为准。
-- 例外:构建期设计规格 `2DPlatformerTemplate.md` 以中文维护,英文入口是 `ARCHITECTURE.EN.md` / `EXTENDING.EN.md` / `Onboarding.EN.md`。
 - 当前为简单版,后续会拆分职能(如 CONTRIBUTING、ADR);先保持本结构。
 
 ## 4. 版本控制
@@ -45,7 +43,7 @@
 - 每台机器安装 git-lfs 并执行 `git lfs install`。
 - `git lfs track` 建议清单:`*.png *.psd *.aseprite *.tga *.jpg *.wav *.mp3 *.ogg *.ttf *.otf *.fbx *.blend *.mp4 *.mov`。
 - **不要** LFS `*.unity/*.prefab/*.asset/*.meta`:它们是文本,交给 Smart Merge。
-- 注意配额:GitHub 的 LFS 存储与流量有免费上限;从历史删除文件**不会**释放远端 LFS 存储,需删库重建或联系支持。
+- 注意配额。
 
 ## 5. 拓展
 

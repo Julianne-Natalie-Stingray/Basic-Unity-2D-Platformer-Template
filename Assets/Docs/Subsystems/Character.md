@@ -1,30 +1,70 @@
 # Character 子系统
 
-> English: [Character.EN.md](Character.EN.md)。返回 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+## 子系统功能
 
-## 职责
+负责刚体运动与状态推导；不负责输入来源、动画资源与死亡。
 
-角色运动机制:拥有刚体、收意图、由物理事实推出运动状态。它不拥有输入、动画资源、死亡语义或玩法规则。
+## 依赖的子系统及具体依赖业务
 
-## 组成
+暂无。
 
-| 路径 | 类型 | 职责 |
-| --- | --- | --- |
-| `Motor.cs` | MonoBehaviour | 拥有 `Rigidbody2D`;收意图(`SetMoveX` / `Jump` / `SetJumpHeld`);推出 `MovementState`;`Activate` / `Deactivate` 是唯一启停入口;`LockHorizontal` 供交互锁定 |
-| `MovementState.cs` | enum | `Idle` / `Run` / `Jump` / `Fall`;**不含 `Dead`** |
-| `CharacterMovementConfigs.cs` | ScriptableObject | 几何参数;由 `Physics2D.gravity` 推导重力与跳跃速度 |
-| `CharacterAnimationView.cs` | MonoBehaviour | 观察 `StateChanged` 与朝向驱动 Animator;`TryPlayInteract`;`PlayDeath` 由 `PlayerDeath` 调用 |
+## API
 
-## 公共 API
+### 字段
 
-- `Motor.SetMoveX` / `Jump` / `SetJumpHeld` / `LockHorizontal` / `Activate` / `Deactivate`。
-- `Motor.State` / `StateChanged` / `IsGrounded` / `Velocity` / `Facing` / `IsControlLocked`。
-- `CharacterAnimationView.TryPlayInteract` / `OnInteractionAnimationEnded` / `PlayDeath`。
-- `CharacterMovementConfigs` 的只读参数。
+- `Motor.State` / `IsGrounded` / `Velocity` / `Facing` / `IsControlLocked`：运动状态。
 
-## 边界
+### 事件
 
-- `Character → []`:不引用 Level / Player / Core / Game。
-- **死亡语义在 `Player` 的 `PlayerDeath`**;`Motor` 不知道"死",只提供启停。
-- 物理关机(`body.simulated = false`)与清速度由 `PlayerDeath` 负责。
-- 动画事件方法保持 `public`(由 Animator 按名字调用)。
+- `Motor.StateChanged`：状态变化。
+
+### 公共方法
+
+- `Motor.SetMoveX` / `Jump` / `SetJumpHeld`：移动与跳跃意图。
+- `Motor.LockHorizontal` / `Activate` / `Deactivate`：控制与启停。
+- `CharacterAnimationView.TryPlayInteract` / `PlayDeath`：动画请求。
+
+## 注意事项
+
+### 总则
+
+- `Motor` 是唯一启停入口。
+- 死亡语义不在本层。
+- 物理事实推出状态，不保存输入历史。
+
+### Player
+
+- 物理关机由 `PlayerDeath` 负责, `PlayerDeath` 调用 `Deactivate` 与 `PlayDeath`。
+- `PlayerInteraction` 调用 `LockHorizontal`。
+
+## 内容
+
+```text
+Character/
+  SO/
+    CharacterMovementConfigs.asset — 运动参数
+  Scripts/
+    Basic2DPlatformer.Character.asmdef — 程序集边界
+    Motor.cs — 刚体运动
+    MovementState.cs — 运动状态
+    CharacterAnimationView.cs — 动画视图
+    SODefinitions/
+      CharacterMovementConfigs.cs — 参数定义
+```
+
+## 实现思路
+
+### 代码架构
+
+`Motor` 拥有刚体；动画视图观察状态。
+
+### 使用的范式
+
+组合、事件、状态枚举。
+
+### 内部方法 / 字段 / 事件
+
+- `Motor.body`：刚体。
+- `Motor.facing`：朝向。
+- `Motor.isControlLocked`：控制锁。
+- `CharacterAnimationView.markerPosition`：朝向标记。

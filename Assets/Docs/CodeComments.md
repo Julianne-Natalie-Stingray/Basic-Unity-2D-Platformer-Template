@@ -1,6 +1,6 @@
 # 代码注释规范
 
-> 本工程代码注释的**唯一**标准。English: [CodeComments.EN.md](CodeComments.EN.md)
+> 本工程代码注释的**唯一**标准。
 > 依据:Microsoft C# 约定与 .NET、Google C# 风格的通行做法,并结合本工程的团队与文档现状。
 
 ## 0. 一句话

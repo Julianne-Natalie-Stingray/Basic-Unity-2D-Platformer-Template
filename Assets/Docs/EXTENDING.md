@@ -1,6 +1,6 @@
 # 拓展指南
 
-> 每个官方拓展点怎么做。English: [EXTENDING.EN.md](EXTENDING.EN.md)。架构背景见 [ARCHITECTURE.md](ARCHITECTURE.md)。
+> 每个官方拓展点怎么做。架构背景见 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
 ## ① 加场景 / 关卡
 
@@ -27,7 +27,7 @@
 ## ③ 加 UI 屏幕
 
 1. 面板本身挂 `UiPanel`: 它负责显隐、焦点还原与可选冻结;不要直接 `SetActive`,也不要写 `Time.timeScale`。
-2. 需要订阅游戏事件时,在常驻的 Canvas 根(`UiRoot`)下新增脚本;按钮行为优先复用 `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton`,不要在屏幕脚本里写按钮方法。
+2. 需要订阅游戏事件时,在常驻的 Canvas 根(`UiRoot`)下新增脚本;按钮行为优先复用 `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton` / `NewGameButton` / `ContinueButton` / `SaveButton`,不要在屏幕脚本里写按钮方法。
 3. 面板默认未激活;打开用 `UiPanel.Open()`,关闭用 `UiPanel.Close()`(可接到按钮的持久监听)。
 4. 新增屏幕 = 新脚本 + 场景内面板/预制体,不修改共享脚本。
 
@@ -53,7 +53,7 @@
 
 1. 新建 `Assets/<Name>/Scripts/` 与 asmdef(`Basic2DPlatformer.<Name>`),按 [ARCHITECTURE.md](ARCHITECTURE.md) 的依赖方向填引用。
 2. 若被更上层使用,更新上层 asmdef 的 references。
-3. 在 `Assets/Docs/Subsystems/<Name>.md`(+ `.EN.md`)登记职责与公共 API,并在 `ARCHITECTURE.md` 的表里加一行。
+3. 在 `Assets/Docs/Subsystems/<Name>.md` 登记职责与公共 API,并在 `ARCHITECTURE.md` 的表里加一行。
 
 ## ⑧ 加项目级契约
 
@@ -66,3 +66,13 @@
 5. 改完运行 `Tools/Basic2DPlatformer/Project` 的 `Validate`(会校验 asmdef 边)。
 
 > 典型:`IInteractable` / `InteractionDetails` / `IKillable`。
+
+## ⑨ 加存档 section
+
+1. 在玩法程序集新增组件,实现 `Basic2DPlatformer.Contracts` 的 `ISaveContributor`(零项目依赖,无需引用 Game)。
+2. `Key` 必须**稳定且唯一**(例如 `"level-a/portal-1"`),不要用 `GetInstanceID()`;同一 key 出现两次时存档会整体失败。
+3. `CanCapture()` 的语义是"当前状态可表示",**不是**"没有在动"。菜单冻结时动画会停在半路;若无法表示中间态就返回 false,并接受 Save 失败。
+4. `Capture()` 只读自身状态,自行序列化;`Restore(json)` 在对象自身 `Start` 之后由 `SaveService` 调用,失败时保留 pending 以便下次场景加载重试。
+5. 场景贡献者由 `SaveService` 在 `sceneLoaded` 后等一帧,用 `FindObjectsByType(..., FindObjectsInactive.Include)` 扫描当前活动场景;`DontDestroyOnLoad` 与 additive 场景不参与。
+6. 信封固定为 `version + sections[]`;新增 section 不改变信封。新 section 的 key 一旦发布就不要改名,内部 schema 由贡献者自己维护。
+7. 改完跑 `Assets/Tests/EditMode` 的 `SaveSystemTests`,并补一条覆盖 `CanCapture` 失败/恢复的测试。

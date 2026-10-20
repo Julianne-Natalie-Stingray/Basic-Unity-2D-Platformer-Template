@@ -21,7 +21,7 @@ public abstract class SettingStore<TData>
     /// <summary>先从设计默认值铺底再由文件覆盖: 文件缺失的成员回退到设计值而不是零值.</summary>
     public void Load()
     {
-        data = new TData();
+        data = new();
         data.ResetToDefault();
         filePath = BuildFilePath();
 

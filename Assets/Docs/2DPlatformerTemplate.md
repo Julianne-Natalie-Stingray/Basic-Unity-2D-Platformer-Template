@@ -1,10 +1,10 @@
 # 2D Platformer 模板规格
 
-> 本文是**构建期设计规格**,以中文维护;面向使用者的英文入口是 [ARCHITECTURE.EN.md](ARCHITECTURE.EN.md) / [EXTENDING.EN.md](EXTENDING.EN.md) / [Onboarding.EN.md](Onboarding.EN.md)。
+> 本文是**构建期设计规格**,以中文维护。
 
 > 本次工作的**唯一**设计契约。所有旧 `README.md`/`CHANGELOG.md`/`PENDING_INSPECTOR.md` 已移除;文档改由 `Assets/Docs/` 集中承载(见 §9)。
 > 实现与本文件冲突时以本文件为准;变更先改本文件。
-> 语言:模板文档为**中英成对**(`NAME.md` 中文基准 + `NAME.EN.md` 英文)。
+> 语言:文档以中文维护。
 
 ---
 
@@ -19,7 +19,7 @@
 
 - **协作地基**:程序集边界(asmdef)、去中心化场景/关卡注册、编辑器工具、文档机制、版本控制策略。
 - **玩法**:Player 移动/跳跃/交互、Cinemachine 相机、通用交互框架、Tilemap 示例关卡。
-- **流程**:主菜单 / 暂停设置 / 死亡 / 下一关 / 结算 5 屏(uGUI + TMP,英文占位文案)、内存进度。
+- **流程**:主菜单 / 设置 / 暂停 / 死亡 / 下一关 / 结算;主菜单提供 New Game / Continue,游戏内暂停菜单提供 Save(uGUI + TMP,英文占位文案)。
 - **音频**:音量设置持久化后**应用到 AudioMixer** 的 Master / OST / SFX 总线。
 - 占位美术。
 
@@ -27,10 +27,10 @@
 
 | 排除项 | 原因 |
 | --- | --- |
-| Env 全系(电线/绕线/电压/极性/Anchor/插座/Portal) | PluggerHead 专属解谜玩法 |
+| Env 全系(电线/绕线/电压/极性/Anchor/插座) | PluggerHead 专属解谜玩法 |
 | 背包系统 | PluggerHead 专属 |
-| 测试程序集 | 暂缓 |
-| 存档持久化 | 仅预留扩展点 |
+| 其余子系统的测试程序集 | Game 存档已有 EditMode 测试;其余暂缓 |
+| 机关状态存档 | 不做:只存 `progress`;`MovingPlatform` / `Portal` 等动画中间态不作为稳定数据 |
 | 默认启用 Git LFS | 每个项目自行决定(见 §10.3) |
 
 ---
@@ -44,8 +44,8 @@
   - `Level`/`Contracts` 依赖反转与 `Portal` 状态机(§7.3);
   - `UI` 组件化与 `UiPanel` 统一(§7.5)。
   其余新增能力走新文件。
-- **目录**:子系统代码 `Assets/<Subsystem>/Scripts/`;工具 `Assets/Editor/`;文档 `Assets/Docs/`;共享资源 `Assets/{Scene,Visuals,Sounds}`,子系统资源 `Assets/<Subsystem>/{Prefabs,SO,Physics}`。
-- **代码风格**(沿用既有):一文件一类型、`public` / `[SerializeField] private` / `private` 显式访问词、property + backing field、`GameLog` 日志、`InitializeInternal` / `ResolveDependencies`。代码注释见 [CodeComments.md](CodeComments.md);文档**中英分成两份 `.md`**(中文基准)。
+- **目录**:子系统代码 `Assets/<Subsystem>/Scripts/`;独立包用 `Assets/<Package>/Runtime`(测试放 `Tests/`);工具 `Assets/Editor/`;文档 `Assets/Docs/`;共享资源 `Assets/{Scene,Visuals,Sounds}`,子系统资源 `Assets/<Subsystem>/{Prefabs,SO,Physics}`。
+- **代码风格**(沿用既有):一文件一类型、`public` / `[SerializeField] private` / `private` 显式访问词、property + backing field、`GameLog` 日志、`InitializeInternal` / `ResolveDependencies`。代码注释见 [CodeComments.md](CodeComments.md);文档以中文维护。
 
 ---
 
@@ -54,8 +54,8 @@
 ```
 Assets/
   Docs/                              (所有文档集中于此;见 §9)
-    AGENTS / ARCHITECTURE / EXTENDING / CodeComments (+ .EN)
-    Subsystems/<Name>.md (+ .EN.md)
+    AGENTS / ARCHITECTURE / EXTENDING / CodeComments
+    Subsystems/<Name>.md
   Core/       Scripts/ · SO/ · Prefabs/
   Game/       Scripts/
   Contracts/  Scripts/
@@ -81,8 +81,9 @@ Assets/
 
 ```
 外部包(零项目依赖)      GrignardReagent.Pooling
-低层(无项目内依赖)      Contracts、Infra、Game、Character
-Core    → { Infra, Game, GrignardReagent.Pooling }
+低层(无项目内依赖)      Contracts、Infra、Character
+Game    → { Contracts }
+Core    → { Infra, Game, Contracts, GrignardReagent.Pooling }
 Level   → { Game, Contracts }
 Player  → { Core, Character, Contracts }
 UI      → { Core, Game, Level, Player }
@@ -92,10 +93,10 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 | 程序集 | 覆盖 | 主要引用 |
 | --- | --- | --- |
 | `Basic2DPlatformer.Infra` | `Assets/Infra/InputSystem`(生成物) | Unity.InputSystem |
-| `Basic2DPlatformer.Core` | `Assets/Core/Scripts` | **Infra、Game、GrignardReagent.Pooling**、InputSystem、GameLog、Timer、NaughtyAttributes |
-| `Basic2DPlatformer.Game` | `Assets/Game/Scripts` | 无项目内引用(GameLog 为 DLL,自动引用) |
+| `Basic2DPlatformer.Core` | `Assets/Core/Scripts` | **Infra、Game、Contracts、GrignardReagent.Pooling**、InputSystem、GameLog、Timer、NaughtyAttributes |
+| `Basic2DPlatformer.Game` | `Assets/Game/Scripts` | Contracts(GameLog 为 DLL,自动引用) |
 | `Basic2DPlatformer.Contracts` | `Assets/Contracts/Scripts` | 无项目内引用 |
-| `GrignardReagent.Pooling` | `Assets/Pooling/Runtime` | 无项目内引用(独立包) |
+| `GrignardReagent.Pooling` | UPM 包 | 无项目内引用(独立包) |
 | `Basic2DPlatformer.Character` | `Assets/Character/Scripts` | 无项目内引用 |
 | `Basic2DPlatformer.Player` | `Assets/Player/Scripts` | Core、Character、Contracts |
 | `Basic2DPlatformer.Level` | `Assets/Level/Scripts` | Game、Contracts |
@@ -184,11 +185,14 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 - `AudioSettings` 已由 `Core/Audio/Setting/` 迁入此处(见 §4)。
 - 新增 `FreezeCoordinator.cs`(静态,owner 集合,自动清除已销毁 owner);原 `FreezeWhileVisible.cs` 已移除,面板冻结改由 UI 的 `UiPanel` 发起。
 - Progress:`GameProgress`/`LevelProgressStore` 放 Game;`LevelProgressTracker` **放 Level**(订阅同程序集的 `LevelManager`,避免 Game→Level 反向依赖);`LevelCount = 1`。
-- Setting:既有 5 文件不动。
+- Save:`ISaveContributor` 放 Contracts;`SaveSystem`、`GameSaveStore`、版本化 `SaveEnvelope` 放 Game;`GameProgressContributor` 提供固定 key `progress`。信封只含 `version + sections[]`,新增 section 不改变信封。机关状态不纳入当前存档。
+- 存档流程:扫描贡献者 → 全部 `CanCapture` → 全部 `Capture` → 写入临时文件 → 替换 `GameSave.json`;任一失败不触碰正式文件。触发点:手动 Save、`GameProgress.LevelCompleted` 延迟一帧、退出(已有存档且未刚 New Game)。
+- `lastLevelId` 来自 `LevelProgressTracker.levelId`,不使用场景名;`Continue` 目标暂固定 `SampleLevel`,关卡顺序未实现。
+- Setting:既有 5 文件不动;设置原子写入留待后续轮次。
 
 ### 7.5 UI(`Basic2DPlatformer.UI`)
 
-- 面板统一挂 `UiPanel`(显隐 + 焦点还原 + 可选冻结);按钮行为由 `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton` 携带数据完成。
+- 面板统一挂 `UiPanel`(显隐 + 焦点还原 + 可选冻结);按钮行为由 `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton` / `NewGameButton` / `ContinueButton` / `SaveButton` 携带数据完成。
 - `SettingsScreen` 只管音量存取与保存后应用;`NextLevelScreen` 通过 `EnvironmentFacade.Level` 订阅 `LevelCleared`;`DeathScreen` 订阅 `PlayerDeath.PlayerDied`;两者都只把事件接到 `UiPanel.Open()`。
 - 主菜单与结算不再有专属屏幕脚本;`MainMenuScreen` / `FinalSceneScreen` 已删除。
 - `UI → Player`(死亡事件)与 `UI → Level`(环境门面);不再直接依赖 `Character`。
@@ -235,11 +239,11 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 ## 9. 文档机制
 
 - 位置:`Assets/Docs/`(全部集中);子系统文档 `Assets/Docs/Subsystems/<Name>.md`。
-- 命名:`NAME.md` = 中文(**基准**),`NAME.EN.md` = 英文;两份**全部成对**;英文落后时以中文为准。例外:本文以中文维护,英文入口见文首。
+- 命名:文档以中文维护;不再维护英文版本。
 - 简单版内容:`AGENTS.md`、`ARCHITECTURE.md`(子系统 + 拓展点)、`EXTENDING.md`、每子系统一份 README。
 - `AGENTS.md` 承载:分工与写入边界、代码/文档规范、**版本控制流程**(含 Smart Merge 与 LFS onboarding)、**一人一场景/预制体 owner**纪律、交付流程。
 - **暂不做任何强制**(纯文档约定);工具窗口的 `Validate` 已校验 asmdef 依赖边与 UI 必填引用,其余仍靠评审。
-- ⚠️ 注意:AI 代理通常只自动发现**仓库根或工作区根**的 `AGENTS.md`,`Assets/Docs/AGENTS.md` 可能不被自动读取。建议在仓库根放一个**指针 stub**(指向 `Assets/Docs/AGENTS.md`),此项待你确认。
+- ⚠️ 注意:AI 代理通常只自动发现**仓库根或工作区根**的 `AGENTS.md`。仓库根已放置指针 stub,指向 `Assets/Docs/AGENTS.md`。
 
 ---
 
@@ -272,20 +276,22 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 
 | 类别 | 产物 |
 | --- | --- |
-| 贴图 | `Sprites/Player.png`、`Ground.png`、`Goal.png`(占位) |
-| 物理 | `Physics/Player.physicsMaterial2D`(friction 0 / bounciness 0) |
-| Tile | `SO/GroundTile.asset` |
-| SO | 每个场景一个 `SceneDefinition` |
-| 预制体 | `Prefabs/Player.prefab`、`Prefabs/Camera.prefab` |
-| 场景 | `Scenes/MainMenu.unity`、`SampleLevel.unity`、`Final.unity` |
+| 贴图 | `Visuals/Player.png`、`Ground.png`、`Goal.png`(占位) |
+| 物理 | `Player/Physics/Player.physicsMaterial2D`(friction 0 / bounciness 0) |
+| Tile | `Level/SO/GroundTile.asset` |
+| SO | 每个场景一个 `Scene/Samples/<Name>SceneDefinition.asset` |
+| 预制体 | `Player/Prefabs/Player.prefab`、`Core/Prefabs/Camera.prefab` |
+| 场景 | `Scene/Samples/MainMenu.unity`、`SampleLevel.unity`、`Final.unity` |
 | 层级 | `Ground`、`Player` |
 | asmdef | §4 清单 |
 
-`SampleLevel`: `Core` 预制体 + `Grid`(Tilemap + TilemapCollider2D + CompositeCollider2D + 静态 Rigidbody2D) + `Player` + `Main Camera`(Camera 预制体) + `GlobalUI`(DeathScreen/NextLevelScreen) + 3 个可收集 `LevelGoal` + `LevelConditions`(`LevelGoalAndOperator`) + `LevelManager`(`rootCondition` 指向 `LevelGoalAndOperator`) + `Hazard` + 水平 `MovingPlatform` + `Portal`(→ `PortalExit`) + `EventSystem`。
+`SampleLevel`: `Core` 预制体 + `SceneRoot`(`LevelManager` + `EnvironmentFacade` + `WorldGeometries`/`Cameras`) + `Grid`(Tilemap + TilemapCollider2D + CompositeCollider2D + 静态 Rigidbody2D) + `Player` + `Main Camera`(Camera 预制体) + `UiRoot`(`DeathScreen`/`NextLevelScreen`) + 3 个可收集 `LevelGoal` + `LevelGoals`(`LevelGoalAndOperator`) + `LevelManager.rootCondition` + `Hazard` + 水平 `MovingPlatform` + `Portal` / `PortalExit`(单向 + 冷却状态) + `EventSystem`。
 
 ---
 
 ## 12. 交付顺序(地基 → 玩法)
+
+> 以下为构建期的实施顺序,现已全部落地;剩余事项见 §14。
 
 1. **文档清理 + 规格**(已完成)。
 2. **协作地基**
@@ -293,7 +299,7 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
    2. `SceneDefinition` + `SceneSwitch` 重构 + 删 `SceneId`/`SceneSwitchConfigs`;`SceneDefinition` 自定义 Inspector。
    3. 编辑器工具窗口 **Phase 1**。
    4. `Ground`/`Player` 层。
-   5. 文档骨架(`AGENTS` / `ARCHITECTURE` / `EXTENDING` / `Subsystems`)+ 根 `AGENTS.md` stub(待确认)。
+   5. 文档骨架(`AGENTS` / `ARCHITECTURE` / `EXTENDING` / `Subsystems`)+ 根 `AGENTS.md` stub(已完成)。
    6. VCS:`.gitattributes` + `Tools/setup-git.*` + AGENTS 相关章节。
 3. **玩法**
    7. Player + 输入(加 `Interact`=F)+ 交互框架。
@@ -311,15 +317,14 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 
 ## 13. 验收标准
 
-- **协作**:新成员按 `AGENTS.md` 可完成 onboarding(Smart Merge 脚本、owner 规则);加一个场景只需"建场景 + 建 `SceneDefinition`",编辑器工具一键注册,**不碰任何共享代码文件**。
-- **玩法**:`MainMenu → SampleLevel`,A/D 移动、Space 跳跃(几何参数手感)、F 交互;相机跟随并受边界限制;踩 `Hazard` → 死亡面板 + 冷冻;可乘坐水平 `MovingPlatform`;走进 `Portal` 传送;收集全部 3 个目标(`LevelGoalAndOperator` 达成 → `LevelManager.LevelCleared`)→ 下一关面板 → `Final`;暂停/设置可开关、冻结/解冻正确、音量可保存。
-- **构建**:程序集单向依赖、`Contracts` 零项目依赖、控制台无报错。
+- **协作**:新成员按 `AGENTS.md` 可完成 onboarding(Smart Merge 脚本、owner 规则);加一个场景只需"建场景 + 放 `LevelManager`/`EnvironmentFacade` + 建 `SceneDefinition`",编辑器工具一键注册,**不碰任何共享代码文件**。
+- **玩法**:`MainMenu` 的 New Game 清档进入 `SampleLevel`,Continue 在存在存档时读档进入;A/D 移动、Space 跳跃(几何参数手感)、F 交互;相机跟随并受边界限制;踩 `Hazard` → 死亡面板 + 冷冻;可乘坐水平 `MovingPlatform`;走进 `Portal` 传送(单向/冷却状态);收集全部 3 个目标(`LevelGoalAndOperator` 达成 → `LevelManager.LevelCleared`)→ 下一关面板 → `Final`;游戏内 HUD Menu 打开暂停面板,Save 写入 `progress`,Resume 解冻;设置可开关、冻结/解冻正确、音量可保存。
+- **构建**:程序集单向依赖、`Contracts` / `GrignardReagent.Pooling` 零项目依赖、控制台无报错。
 
 ---
 
 ## 14. 未决 / TODO
 
-- TODO: 进度持久化。
-- TODO: 测试程序集。
-- TODO: `GrignardReagent.Pooling` 抽成独立 UPM 包(当前为项目内 asmdef,已有 EditMode 测试)。
-- TODO: LFS 按项目启用(说明在 AGENTS)。
+- TODO: 关卡顺序与 `lastLevelId` 解析;当前 Continue 固定进入 `SampleLevel`。
+- TODO: Setting 原子写入。
+- TODO: 其余子系统的测试程序集(Game 存档已有 EditMode 测试)。

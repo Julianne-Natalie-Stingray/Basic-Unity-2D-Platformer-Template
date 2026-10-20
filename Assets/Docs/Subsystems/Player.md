@@ -1,27 +1,83 @@
 # Player 子系统
 
-> English: [Player.EN.md](Player.EN.md)。返回 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+## 子系统功能
 
-## 职责
+负责输入、交互、动画音频与死亡状态；不负责运动机制与环境规则。
 
-把输入、交互、动画音频与死亡状态接到角色上;不拥有运动机制或环境规则。
+## 依赖的子系统及具体依赖业务
 
-## 组成
+- Core：输入与音频。
+- Character：`Motor` 与动画视图。
+- Contracts：`IInteractable` 与 `IKillable`。
 
-| 路径 | 类型 | 职责 |
-| --- | --- | --- |
-| `PlayerController.cs` | MonoBehaviour | 读 `CoreFacade.Input` → 调 `Motor` 意图 API |
-| `PlayerInteraction.cs` | MonoBehaviour | 搜索并处理 `Contracts.IInteractable`;成功后 `Motor.LockHorizontal(true)` |
-| `PlayerAnimationAudio.cs` | MonoBehaviour | 动画事件 → Core 音频;移动音效在 `PlayerDeath.IsDead` 时跳过 |
-| `PlayerDeath.cs` | MonoBehaviour | 实现 `Contracts.IKillable`;`Kill()` 关物理、停运动、播死亡动画并广播 `PlayerDied` |
+## API
 
-## 公共 API
+### 字段
 
-- `PlayerDeath.Kill()`(`IKillable`)/ `IsDead` / `PlayerDied`。
-- `PlayerInteraction.TryPerformOperation()`。
+- `PlayerDeath.IsDead`：死亡状态。
 
-## 边界
+### 事件
 
-- `Player → {Core, Character, Contracts}`;**不依赖 Level**。
-- 死亡由环境调用 `IKillable.Kill()`;`Motor` 不含死亡语义。
-- `PlayerDied` 是给 UI 的 C# 事件;`DeathScreen` 直接订阅(`UI → Player`)。
+- `PlayerDeath.PlayerDied`：死亡广播。
+
+### 公共方法
+
+- `PlayerDeath.Kill`：进入死亡。
+- `PlayerInteraction.TryPerformOperation`：执行交互。
+
+## 注意事项
+
+### 总则
+
+- 死亡由环境调用 `Kill`；调用幂等。
+- 死亡时清速度、关物理并播动画。
+- `PlayerDied` 供 UI 订阅。
+- 输入与音频依赖场景 `Core`。
+
+### Core
+
+- 输入与音频经 `CoreFacade`。
+- 缺少 `Core` 时控制器禁用。
+
+### Character
+
+- 移动经 `Motor` 意图 API。
+- 死亡调用 `CharacterAnimationView.PlayDeath`。
+
+### Contracts
+
+- 实现 `IKillable`；消费 `IInteractable`。
+- 
+
+## 内容
+
+```text
+Player/
+  Prefabs/
+    Player.prefab — 玩家预制体
+  Physics/
+    Player.physicsMaterial2D — 物理材质
+  Scripts/
+    Basic2DPlatformer.Player.asmdef — 程序集边界
+    PlayerController.cs — 输入转发
+    PlayerInteraction.cs — 交互处理
+    PlayerAnimationAudio.cs — 动画音效
+    PlayerDeath.cs — 死亡状态
+```
+
+## 实现思路
+
+### 代码架构
+
+控制器、交互、音频、死亡分工。
+
+### 使用的范式
+
+组合、事件、契约。
+
+### 内部方法 / 字段 / 事件
+
+- `PlayerDeath.motor`：运动。
+- `PlayerDeath.body`：刚体。
+- `PlayerInteraction.hits`：命中缓存。
+- `PlayerAnimationAudio.deathHandle`：死亡音效。

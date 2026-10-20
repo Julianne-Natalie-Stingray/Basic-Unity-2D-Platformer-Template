@@ -1,37 +1,70 @@
-# Pooling 包
+# Pooling 子系统
 
-> English: [Pooling.EN.md](Pooling.EN.md)。返回 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+## 子系统功能
 
-## 职责
+负责组件池的复用与释放；不负责对象语义与重置。
 
-通用组件池:以 prefab 为模板创建/复用 `Component` 实例。独立 asmdef `GrignardReagent.Pooling`,不依赖任何 `Basic2DPlatformer.*`,也不引用 `GameLog`。
+## 依赖的子系统及具体依赖业务
 
-## 组成
+暂无。
 
-| 路径 | 类型 | 职责 |
-| --- | --- | --- |
-| `ComponentPool.cs` | class | 组件池;总上限、active 记账、幂等释放、预热、清理 |
-| `GameObjectPool.cs` | class | GameObject 适配器;内部复用 `ComponentPool<Transform>` |
+## API
 
-## API / 语义
+### 字段
 
-- `Get()`:池空且 `CountAll >= MaxTotal` 时返回 `null`;否则复用 inactive 或创建。
-- `Release(item)`:幂等;`null`/已销毁/外来/重复释放 → `Debug.LogWarning` 并忽略。
-- `ReleaseAll()`:把所有 active 归还为 inactive(不销毁)。
-- `Clear(bool destroyActive = false)`:销毁 inactive;为真时连 active;两者都先跑 `onReturn`。
-- `Dispose()`:`Clear(true)`。
-- `Prewarm(count)`:只创建 inactive,不触发 `onGet`/`onReturn`;按 `MaxTotal` 截断。
-- `CountAll` / `CountActive` / `CountInactive` / `MaxTotal`。
-- `GameObjectPool`:与 `ComponentPool<T>` 同语义,但 `Get()` 返回 `GameObject`、`Release(GameObject)`。
+- `ComponentPool<T>.CountAll` / `CountActive` / `CountInactive` / `MaxTotal`：计数与上限。
+- `GameObjectPool.MaxTotal` / `CountAll` / `CountActive` / `CountInactive`：同语义。
 
-## 约定
+### 事件
 
-- 无 namespace;asmdef `GrignardReagent.Pooling`;`MaxTotal <= 0` 表示不设上限。
-- `onGet` / `onReturn` 由调用方提供;对象重置放在 `onReturn`。
-- 不要从外部 `Destroy` 池化对象;统一用 `Release` / `Clear` / `Dispose`。
-- `Clear` / `Release` 的销毁在 play 模式用 `Destroy`,编辑模式用 `DestroyImmediate`。
+暂无。
 
-## 状态
+### 公共方法
 
-- 当前是项目内 asmdef;计划抽成独立 UPM 包。
-- EditMode 测试:`Assets/Pooling/Tests`(15 个用例:`ComponentPool` 9 个 + `GameObjectPool` 6 个,覆盖上限、复用、重复/外来释放、`Clear`、`ReleaseAll`、`Prewarm`)。
+- `ComponentPool<T>.Get` / `Release` / `ReleaseAll` / `Clear` / `Dispose` / `Prewarm`：池操作。
+- `GameObjectPool.Get` / `Release`：GameObject 适配。
+- `GameObjectPool.ReleaseAll` / `Clear` / `Dispose` / `Prewarm`：同语义。
+
+## 注意事项
+
+### 总则
+
+- `MaxTotal <= 0` 表示不设上限。
+- `Release` 幂等；外来或重复释放忽略。
+- `onGet` / `onReturn` 由调用方提供。
+- `Clear(true)` 同时销毁 active。
+- `Dispose` 等价 `Clear(true)`。
+- `Prewarm` 不触发回调。
+- 编辑模式销毁用 `DestroyImmediate`。
+
+### Core
+
+- 用于 `AudioEmitter` 池化。
+
+## 内容
+
+```text
+Packages/
+  manifest.json — 包引用
+UPM 包 com.grignardreagent.pooling/
+  Runtime/
+    ComponentPool.cs — 组件池
+    GameObjectPool.cs — GameObject 池
+```
+
+## 实现思路
+
+### 代码架构
+
+活动与空闲集合 + 容量上限。
+
+### 使用的范式
+
+对象池、回调。
+
+### 内部方法 / 字段 / 事件
+
+- `ComponentPool.all`：全部实例。
+- `ComponentPool.active`：活动集合。
+- `ComponentPool.maxTotal`：容量上限。
+- `GameObjectPool.pool`：内部组件池。

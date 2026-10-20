@@ -9,6 +9,26 @@ public sealed class LevelProgressStore
 
     public int CompletedLevels { get; private set; }
 
+    /// <summary>最后进入的场景稳定 id; 空表示尚未进入任何关卡.</summary>
+    public string LastLevelId { get; private set; } = string.Empty;
+
+    /// <summary>由关卡场景在初始化时写入; 空值忽略, 避免覆盖已有记录.</summary>
+    public void SetLastLevel(string levelId)
+    {
+        if (!string.IsNullOrWhiteSpace(levelId))
+            LastLevelId = levelId.Trim();
+    }
+
+    /// <summary>从存档恢复; 非法进度被夹到合法范围, 空 id 保留为空.</summary>
+    public void Restore(int completedLevels, string lastLevelId)
+    {
+        CompletedLevels = completedLevels < 0
+            ? 0
+            : completedLevels > LevelCount ? LevelCount : completedLevels;
+
+        LastLevelId = string.IsNullOrWhiteSpace(lastLevelId) ? string.Empty : lastLevelId.Trim();
+    }
+
     /// <summary>第 1 关始终解锁; 第 N 关需第 N-1 关已通关.</summary>
     public bool IsUnlocked(int levelNumber)
     {
