@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using NaughtyAttributes;
 using UnityEngine;
 
 /// <summary>
@@ -29,7 +30,7 @@ public class Motor : MonoBehaviour
     /// <summary>控制是否被外部锁定(交互等); 锁定时停止水平意图.</summary>
     public bool IsControlLocked => isControlLocked;
 
-    [SerializeField, Tooltip("运动参数")]
+    [SerializeField, Tooltip("运动参数"), Expandable]
     private CharacterMovementConfigs configs;
 
     [SerializeField, Tooltip("可作为地面的碰撞层")]

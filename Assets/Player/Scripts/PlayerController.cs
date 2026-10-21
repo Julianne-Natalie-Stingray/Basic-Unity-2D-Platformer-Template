@@ -4,18 +4,21 @@ using UnityEngine;
 /// 玩家控制器: 把 Core 输入转成 Motor 意图.
 /// 归属: Player.
 /// </summary>
+[RequireComponent(typeof(CharacterAnimationView))]
+[RequireComponent(typeof(PlayerDeath))]
+[RequireComponent(typeof(PlayerAnimationAudio))]
+[RequireComponent(typeof(PlayerInteraction))]
+[RequireComponent(typeof(Motor))]
 [DisallowMultipleComponent]
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField, Tooltip("留空则取同物体上的 Motor")]
     private Motor motor;
 
     private InputManager input;
 
     private void Awake()
     {
-        if (motor == null)
-            motor = GetComponent<Motor>();
+        InitializeInternal();
     }
 
     private void Start()
@@ -97,5 +100,11 @@ public class PlayerController : MonoBehaviour
     {
         if (motor != null)
             motor.SetJumpHeld(false);
+    }
+    
+    private void InitializeInternal()
+    {
+        if (motor == null)
+            motor = GetComponent<Motor>();
     }
 }

@@ -4,16 +4,14 @@ using UnityEngine;
 /// 动画视图: 观察 Motor 的 MovementState 与朝向并驱动 Animator; 不参与移动逻辑.
 /// 归属: Character.
 /// </summary>
+[RequireComponent(typeof(Motor))]
+[RequireComponent(typeof(Animator))]
+[RequireComponent(typeof(SpriteRenderer))]
 [DisallowMultipleComponent]
 public class CharacterAnimationView : MonoBehaviour
 {
-    [SerializeField, Tooltip("留空则取同物体上的 Motor")]
     private Motor motor;
-
-    [SerializeField, Tooltip("留空则自动查找子物体")]
     private Animator animator;
-
-    [SerializeField, Tooltip("留空则自动查找子物体")]
     private SpriteRenderer spriteRenderer;
 
     [SerializeField, Tooltip("未翻转的原始精灵是否朝右")]
@@ -30,18 +28,9 @@ public class CharacterAnimationView : MonoBehaviour
 
     private void Awake()
     {
-        if (motor == null)
-            motor = GetComponent<Motor>();
-        if (animator == null)
-            animator = GetComponentInChildren<Animator>(true);
-        if (spriteRenderer == null)
-            spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
-
-        if (facingMarker != null && facingMarker.IsChildOf(transform) && facingMarker != transform)
-            markerPosition = facingMarker.localPosition;
-        else
-            facingMarker = null;
+        InitializeInternal();
     }
+
 
     private void OnEnable()
     {
@@ -116,5 +105,20 @@ public class CharacterAnimationView : MonoBehaviour
     {
         return animator != null && animator.isActiveAndEnabled &&
             animator.runtimeAnimatorController != null && animator.isInitialized;
+    }
+    
+    private void InitializeInternal()
+    {
+        if (motor == null)
+            motor = GetComponent<Motor>();
+        if (animator == null)
+            animator = GetComponentInChildren<Animator>(true);
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>(true);
+
+        if (facingMarker != null && facingMarker.IsChildOf(transform) && facingMarker != transform)
+            markerPosition = facingMarker.localPosition;
+        else
+            facingMarker = null;
     }
 }

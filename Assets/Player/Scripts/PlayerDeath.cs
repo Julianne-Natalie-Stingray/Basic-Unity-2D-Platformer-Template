@@ -9,6 +9,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Motor))]
 [RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(CharacterAnimationView))]
 public sealed class PlayerDeath : MonoBehaviour, IKillable
 {
     /// <summary>死亡时触发一次.</summary>
@@ -17,7 +18,6 @@ public sealed class PlayerDeath : MonoBehaviour, IKillable
     /// <summary>是否已死亡.</summary>
     public bool IsDead { get; private set; }
 
-    [SerializeField, Tooltip("留空则取同物体上的 CharacterAnimationView")]
     private CharacterAnimationView view;
 
     private Motor motor;
@@ -25,13 +25,9 @@ public sealed class PlayerDeath : MonoBehaviour, IKillable
 
     private void Awake()
     {
-        motor = GetComponent<Motor>();
-        body = GetComponent<Rigidbody2D>();
-
-        if (view == null)
-            view = GetComponent<CharacterAnimationView>();
+        InitializeInternal();
     }
-
+    
     /// <summary>环境判定死亡; 幂等.</summary>
     public void Kill()
     {
@@ -50,5 +46,17 @@ public sealed class PlayerDeath : MonoBehaviour, IKillable
             view.PlayDeath();
 
         PlayerDied?.Invoke();
+    }
+    
+    private void InitializeInternal()
+    {
+        if (motor == null)
+            motor = GetComponent<Motor>();
+        
+        if (body == null)
+            body = GetComponent<Rigidbody2D>();
+
+        if (view == null)
+            view = GetComponent<CharacterAnimationView>();
     }
 }
