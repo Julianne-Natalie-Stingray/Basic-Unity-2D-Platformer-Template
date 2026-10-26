@@ -10,6 +10,8 @@ public struct AudioBuilder
     private AudioManager manager;
     private float volume;
     private float pitch;
+    private bool volumeSet;
+    private bool pitchSet;
     private Transform followTarget;
     private Vector3? position;
     private bool? surviveFreeze;
@@ -22,6 +24,8 @@ public struct AudioBuilder
 
         volume = 1f;
         pitch = 1f;
+        volumeSet = false;
+        pitchSet = false;
         followTarget = null;
         position = null;
         surviveFreeze = null;
@@ -36,6 +40,7 @@ public struct AudioBuilder
             return this;
 
         this.volume = volume;
+        volumeSet = true;
         return this;
     }
 
@@ -46,16 +51,18 @@ public struct AudioBuilder
             return this;
 
         this.pitch = pitch;
+        pitchSet = true;
         return this;
     }
 
-    /// <summary>为音高加小幅随机偏移, 避免重复播放时听感机械.</summary>
+    /// <summary>在 1 的基准上叠加随机偏移, 避免重复播放时听感机械; 会覆盖 clip 的 baseline pitch.</summary>
     public AudioBuilder WithRandomPitch(float min = -0.05f, float max = 0.05f)
     {
         if (isUsed)
             return this;
 
-        pitch += Random.Range(min, max);
+        pitch = 1f + Random.Range(min, max);
+        pitchSet = true;
         return this;
     }
 
@@ -107,6 +114,13 @@ public struct AudioBuilder
 
         isUsed = true;
 
-        return manager.Play(audioId, volume, pitch, position, followTarget, surviveFreeze, allowWhileFrozen);
+        return manager.Play(
+            audioId,
+            volumeSet ? volume : null,
+            pitchSet ? pitch : null,
+            position,
+            followTarget,
+            surviveFreeze,
+            allowWhileFrozen);
     }
 }

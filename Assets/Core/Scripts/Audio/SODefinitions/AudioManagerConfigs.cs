@@ -1,9 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
 using NaughtyAttributes;
 using UnityEngine;
-using System.Linq;
-
 [CreateAssetMenu(
     fileName = "AudioManagerConfigs",
     menuName = "Basic2DPlatformer/Audio Manager Configs")]
@@ -28,20 +25,8 @@ public class AudioManagerConfigs : ScriptableObject
     public int PrewarmAmount => prewarmAmount;
     public int MaxSoundInstance => maxSoundInstance;
 
-    public bool TryGetClip(AudioId requested, 
-        out AudioClipData clip)
-    {
-        clip = audios.FirstOrDefault(audio => audio.AudioId == requested);
-        if (!clip)
-            GameLog.Error(this)
-                .Subsystem("Core")
-                .Name(LogName.Class)
-                .Issue(LogIssue.CannotFind(nameof(requested)))
-                .Action(LogAction.UseFallbackValue("null"))
-                .Write();
-        return clip;
-    }
-    
+    public IReadOnlyList<AudioClipData> Audios => audios;
+
 #if UNITY_EDITOR
     private void OnValidate()
     {

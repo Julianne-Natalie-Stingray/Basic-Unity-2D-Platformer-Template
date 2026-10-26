@@ -12,7 +12,7 @@ public class AudioEmitter : MonoBehaviour
 {
     internal event Action<AudioEmitter> onAudioFinished;
 
-    internal AudioId AudioId => data ? data.AudioId : AudioId.DefaultSfx;
+    internal AudioId AudioId => data ? data.AudioId : AudioId.None;
     internal bool IsPlaying => source && source.isPlaying;
     internal bool IsFinished => isFinished;
     internal bool IsLooping => data && data.Loop;
@@ -127,7 +127,7 @@ public class AudioEmitter : MonoBehaviour
     }
 
     /// <summary>会先用 Stop 结束仍在进行中的播放以便完成回调执行, 使池能对已交出的 emitter 记账; 循环 clip 不装载结束 Timer.</summary>
-    internal void Play()
+    internal void Play(float? volumeOverride, float? pitchOverride)
     {
         Stop();
 
@@ -137,8 +137,9 @@ public class AudioEmitter : MonoBehaviour
         isPlaying = true;
         isFinished = false;
 
-        volume = data ? data.Volume : 1f;
-        pitch = data ? data.Pitch : 1f;
+        // 未覆盖时回落到 clip 的 baseline; 覆盖值只对本次播放有效.
+        volume = Mathf.Clamp(volumeOverride ?? (data ? data.Volume : 1f), MinVolume, MaxVolume);
+        pitch = Mathf.Clamp(pitchOverride ?? (data ? data.Pitch : 1f), MinPitch, MaxPitch);
 
         source.volume = volume;
         source.pitch = pitch;
@@ -153,7 +154,8 @@ public class AudioEmitter : MonoBehaviour
                 .Action(LogAction.Ignore)
                 .Write();
 
-            isPlaying = false;
+            // 仍要报告结束, 否则 AudioManager 已登记并订阅的池租约永远不会归还.
+            Complete(false);
             return;
         }
 
@@ -170,9 +172,20 @@ public class AudioEmitter : MonoBehaviour
 
         _ = new Timer(Mathf.Infinity)
             .CompleteWhen(() => !source.isPlaying)
-            .OnComplete(Stop)
+            .OnComplete(StopNaturally)
             .UseUnscaledTime()
             .Start();
+    }
+
+    /// <summary>自然播完必须与显式 Stop 区分, 否则句柄的 IsFinished 永远为假.</summary>
+    private void StopNaturally()
+    {
+        if (!isPlaying)
+            return;
+
+        InitializeInternal();
+        source.Stop();
+        Complete(true);
     }
 
     /// <summary>幂等; 提前与自然结束都只经此报告一次, 因此句柄的 Stop 与抢占不会把同一次播放报告两次.</summary>
@@ -228,8 +241,8 @@ public class AudioEmitter : MonoBehaviour
         willFollowTarget = false;
 
         isPlaying = false;
-        isFinished = false;
 
+        // isFinished 留给下一个读者(SoundHandle)消费; 下一次 Play 会重置它, 因此不在这里清.
         volume = 1f;
         pitch = 1f;
         surviveFreeze = false;

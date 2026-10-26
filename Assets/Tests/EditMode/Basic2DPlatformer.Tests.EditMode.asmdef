@@ -4,6 +4,8 @@
     "references": [
         "Basic2DPlatformer.Game",
         "Basic2DPlatformer.Contracts",
+        "Basic2DPlatformer.Core",
+        "GrignardReagent.LayeredId",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

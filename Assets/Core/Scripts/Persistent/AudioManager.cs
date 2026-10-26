@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NaughtyAttributes;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -19,11 +20,8 @@ public class AudioManager : MonoBehaviour
 
     private ComponentPool<AudioEmitter> emitterPool;
     private AudioRegistry registry;
+    private readonly Dictionary<AudioId, AudioClipData> cueIndex = new();
 
-    private const float MinVolume = 0f;
-    private const float MaxVolume = 1f;
-    private const float MinPitch = 0.1f;
-    private const float MaxPitch = 3f;
     private const string MasterVolumeParameter = "MasterVolume";
     private const string OstVolumeParameter = "OstVolume";
     private const string SfxVolumeParameter = "SfxVolume";
@@ -38,6 +36,7 @@ public class AudioManager : MonoBehaviour
     {
         emitterPool.Prewarm(configs.PrewarmAmount);
         ApplySettingsFromStore();
+        PlayStartupOst();
     }
 
     private void OnEnable()
@@ -84,8 +83,8 @@ public class AudioManager : MonoBehaviour
     /// <summary>启动声音的唯一入口, 由 AudioBuilder.Play 调用; 池不存在, 无 clip, 冻结门未放行或池耗尽时返回 null 并记录日志.</summary>
     internal ISoundHandle Play(
         AudioId requested,
-        float volume,
-        float pitch,
+        float? volume,
+        float? pitch,
         Vector3? position,
         Transform followTarget,
         bool? surviveFreeze,
@@ -110,9 +109,6 @@ public class AudioManager : MonoBehaviour
         if (!emitter)
             return null;
 
-        emitter.Volume = Mathf.Clamp(volume, MinVolume, MaxVolume);
-        emitter.Pitch = Mathf.Clamp(pitch, MinPitch, MaxPitch);
-
         registry.Register(emitter);
         emitter.gameObject.SetActive(true);
         emitter.onAudioFinished -= ReleaseEmitter;
@@ -131,14 +127,14 @@ public class AudioManager : MonoBehaviour
 
         SoundHandle handle = new SoundHandle(emitter, requested);
 
-        emitter.Play();
+        emitter.Play(volume, pitch);
 
         return handle;
     }
 
     private AudioClipData ResolveClip(AudioId requested)
     {
-        if (configs.TryGetClip(requested, out AudioClipData data))
+        if (cueIndex.TryGetValue(requested, out AudioClipData data))
             return data;
 
         GameLog.Error(this)
@@ -149,6 +145,62 @@ public class AudioManager : MonoBehaviour
             .Write();
 
         return null;
+    }
+
+    private void BuildClipIndex()
+    {
+        cueIndex.Clear();
+
+        if (!configs)
+            return;
+
+        foreach (AudioClipData data in configs.Audios)
+        {
+            if (!data)
+            {
+                GameLog.Warning(this)
+                    .Subsystem("Core")
+                    .Name(LogName.Class)
+                    .Issue(LogIssue.NotAssigned(nameof(data)))
+                    .Action(LogAction.Ignore)
+                    .Write();
+                continue;
+            }
+
+            AudioId id = data.AudioId;
+
+            if (!id.IsValid)
+            {
+                GameLog.Warning(this)
+                    .Subsystem("Core")
+                    .Name(LogName.Class)
+                    .Issue(LogIssue.Invalid($"{data.name}.{nameof(AudioId)}"))
+                    .Action(LogAction.Ignore)
+                    .Write();
+                continue;
+            }
+
+            if (!cueIndex.TryAdd(id, data))
+            {
+                GameLog.Warning(this)
+                    .Subsystem("Core")
+                    .Name(LogName.Class)
+                    .Issue(LogIssue.Specify($"Duplicate AudioId {id}; later entry ignored. "))
+                    .Action(LogAction.Ignore)
+                    .Write();
+            }
+        }
+    }
+
+    private void PlayStartupOst()
+    {
+        if (!playOnStart || !startupOst.IsValid)
+            return;
+
+        CreateBuilder()
+            .WithSurviveFreeze(true)
+            .WithAllowWhileFrozen(true)
+            .Play(startupOst);
     }
 
     private bool IsFrozenEntryAllowed(AudioId requested, bool? allowWhileFrozen, bool willSurviveFreeze)
@@ -305,6 +357,7 @@ public class AudioManager : MonoBehaviour
         }
 
         emitterPool = BuildEmitterPool();
+        BuildClipIndex();
     }
 
     private ComponentPool<AudioEmitter> BuildEmitterPool()
@@ -317,6 +370,8 @@ public class AudioManager : MonoBehaviour
             OnEmitterGet,
             OnEmitterRelease);
 
+    [SerializeField] private AudioId startupOst = AudioId.None;
+    [SerializeField] private bool playOnStart = true;
     [SerializeField] private AudioId debugAudioRequest;
     [SerializeField] private int requestTime = 1;
     [SerializeField] private bool DebugSurviveFreeze;

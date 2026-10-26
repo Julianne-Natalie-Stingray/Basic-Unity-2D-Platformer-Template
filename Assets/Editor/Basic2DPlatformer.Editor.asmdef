@@ -6,6 +6,8 @@
         "Basic2DPlatformer.Core",
         "Basic2DPlatformer.Game",
         "Basic2DPlatformer.UI",
+        "GrignardReagent.LayeredId",
+        "GrignardReagent.LayeredId.Editor",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
