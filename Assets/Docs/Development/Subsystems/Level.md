@@ -14,17 +14,19 @@
 ### 字段
 
 - `EnvironmentFacade.Level`：关卡门面。
-- `LevelManager.IsCleared`：通关状态。
+- `LevelManager.IsCleared` / `IsFailed` / `IsResolved`：结果状态。
 - `ILevelGoal.Fulfilled`：条件满足。
 - `Portal.State`：传送门状态。
 
 ### 事件
 
 - `LevelManager.LevelCleared`：通关广播。
+- `LevelManager.LevelFailed`：失败广播。
 - `ILevelGoal.Changed`：条件变化。
 
 ### 公共方法
 
+- `LevelManager.NotifyFailed`：供自定义失败条件调用。
 - `Portal.ActivatePortal` / `PortalCooldown`：状态切换。
 
 ## 注意事项
@@ -33,6 +35,8 @@
 
 - 不依赖 Character/Player；死亡经 `IKillable`。
 - `LevelGoal` 用 `Player` 标签识别玩家。
+- 通关与失败互斥，先到者胜；`NotifyFailed` 与根条件满足都受 `IsResolved` 约束。
+- `LevelFailed` 是扩展点；示例没有生产者，自定义失败条件在关卡脚本里调用 `NotifyFailed()`。
 - `SceneRoot` 同挂 `LevelManager` 与 `EnvironmentFacade`。
 - `levelId` 是稳定存档 id；场景改名不变。
 - 机关状态不写入当前存档。
@@ -69,7 +73,7 @@ Level/
       LevelGoalOrOperator.cs — 任一条件
     Persistent/
       EnvironmentFacade.cs — 环境门面
-      LevelManager.cs — 通关管理
+      LevelManager.cs — 通关/失败管理
       LevelProgressTracker.cs — 进度写入
 ```
 

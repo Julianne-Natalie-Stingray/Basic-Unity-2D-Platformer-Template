@@ -40,6 +40,7 @@ Window > Package Manager > + > Add package from git URL...
 - `Timer` 依赖 `GameLog 1.1.0`；场景中的 `TimerRunner` 必须挂在持久对象上。
 - `Cinemachine` 固定在 2.x；3.x 与当前 Input System 1.7.0 不兼容。
 - `PlayerControls.cs` 由 Input System 生成，归属 `Infra` 程序集，不手改。
+- `LayeredId` **当前不是 UPM 包**，位于 `Assets/LayeredId`；抽包时保持程序集名不变，manifest 使用 `com.grignardreagent.layeredid` 并固定 tag。
 - `Unity MCP` 仅用于编辑器开发，不进入运行时依赖。
 
 ## 相关文档

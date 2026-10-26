@@ -14,9 +14,10 @@
 ### 1.2 包含
 
 - **协作地基**:程序集边界(asmdef)、去中心化场景/关卡注册、编辑器工具、文档机制、版本控制策略。
-- **玩法**:Player 移动/跳跃/交互、Cinemachine 相机、通用交互框架、Tilemap 示例关卡。
-- **流程**:主菜单 / 设置 / 暂停 / 死亡 / 下一关 / 结算;主菜单提供 New Game / Continue,游戏内暂停菜单提供 Save(uGUI + TMP,英文占位文案)。
-- **音频**:音量设置持久化后**应用到 AudioMixer** 的 Master / OST / SFX 总线。
+- **玩法**:Player 移动/跳跃/交互、Cinemachine 相机、通用交互框架、Tilemap 示例关卡;关卡可在任意时刻判定失败。
+- **流程**:主菜单 / 设置 / 暂停 / 死亡 / 下一关 / 结算;键盘空格暂停、Esc 逐层关闭;主菜单提供 New Game / Continue,游戏内暂停菜单提供 Save(uGUI + TMP,英文占位文案)。
+- **音频**:音量设置持久化后**应用到 AudioMixer** 的 Master / OST / SFX 总线;音频标识为分层路径,由 `LayeredId` 包支撑,新增音效不触碰代码分支。
+- **音频/UI 可选件**:全屏空白点击层(`ClickScreen.prefab`)与点击音效模块。
 - 占位美术。
 
 ### 1.3 明确排除
@@ -60,6 +61,7 @@ Assets/
   Player/     Scripts/ · Prefabs/ · Physics/
   Level/      Scripts/ · SO/
   UI/         Scripts/ · Prefabs/
+  LayeredId/  Runtime/ · Editor/ · Tests/
   Editor/     Basic2DPlatformer.Editor.asmdef · Scripts/
   Infra/      Basic2DPlatformer.Infra.asmdef · InputSystem/
   Scene/      Samples/   (测试场景放 Debug/)
@@ -74,28 +76,30 @@ Assets/
 前缀 `Basic2DPlatformer`。**依赖严格单向、无环**:
 
 ```
-外部包(零项目依赖)      GrignardReagent.Pooling
+外部包(零项目依赖)      GrignardReagent.Pooling、GrignardReagent.LayeredId
 低层(无项目内依赖)      Contracts、Infra、Character
 Game    → { Contracts }
-Core    → { Infra, Game, Contracts, GrignardReagent.Pooling }
+Core    → { Infra, Game, Contracts, GrignardReagent.Pooling, GrignardReagent.LayeredId }
 Level   → { Game, Contracts }
 Player  → { Core, Character, Contracts }
 UI      → { Core, Game, Level, Player }
-Editor  → { Infra, Core, Game, UI }(传递可见全部)
+Editor  → { Infra, Core, Game, UI, GrignardReagent.LayeredId, GrignardReagent.LayeredId.Editor }(传递可见全部)
 ```
 
 | 程序集 | 覆盖 | 主要引用 |
 | --- | --- | --- |
 | `Basic2DPlatformer.Infra` | `Assets/Infra`（生成物） | Unity.InputSystem |
-| `Basic2DPlatformer.Core` | `Assets/Core/Scripts` | Infra、Game、Contracts、Pooling、InputSystem、GameLog、Timer、NaughtyAttributes |
+| `Basic2DPlatformer.Core` | `Assets/Core/Scripts` | Infra、Game、Contracts、Pooling、LayeredId、InputSystem、GameLog、Timer、NaughtyAttributes |
 | `Basic2DPlatformer.Game` | `Assets/Game/Scripts` | Contracts；GameLog |
 | `Basic2DPlatformer.Contracts` | `Assets/Contracts/Scripts` | 无项目内引用 |
 | `GrignardReagent.Pooling` | UPM 包 | 无项目内引用 |
+| `GrignardReagent.LayeredId` | `Assets/LayeredId/Runtime` | 无项目内引用，且 `noEngineReferences` |
+| `GrignardReagent.LayeredId.Editor` | `Assets/LayeredId/Editor` | LayeredId、UnityEditor |
 | `Basic2DPlatformer.Character` | `Assets/Character/Scripts` | 无项目内引用 |
 | `Basic2DPlatformer.Player` | `Assets/Player/Scripts` | Core、Character、Contracts |
 | `Basic2DPlatformer.Level` | `Assets/Level/Scripts` | Game、Contracts |
 | `Basic2DPlatformer.UI` | `Assets/UI/Scripts` | Core、Game、Level、Player、TMP、UnityEngine.UI |
-| `Basic2DPlatformer.Editor` | `Assets/Editor`（Editor 平台限定） | Infra、Core、Game、UI、UnityEditor |
+| `Basic2DPlatformer.Editor` | `Assets/Editor`（Editor 平台限定） | Infra、Core、Game、UI、LayeredId、LayeredId.Editor、UnityEditor |
 
 **硬约束**：
 
@@ -134,6 +138,10 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 | ⑥ 加数据型 SO | SO 生成器 | 否 |
 | ⑦ 加新 Subsystem | 目录 + asmdef + `ARCHITECTURE.md` 登记 | 是(登记) |
 | ⑧ 加项目级契约 | 接口/载荷会被多个程序集使用 → 放 `Contracts` | 是(登记) |
+| ⑨ 加存档 section | 实现 `ISaveContributor`,key 稳定且唯一 | 否 |
+| ⑩ 加分层 ID 域 | 新 ID struct + 目录类 + 3 行抽屉;新增条目只加一行 `const` | 否(各自目录内) |
+| ⑪ 加关卡失败条件 | 自定义组件持 `LevelManager` 并调 `NotifyFailed()` | 否 |
+| ⑫ 加空白点击层 | 实例化 `ClickScreen.prefab` 为 `UiRoot` 首个子物体,按需加 `UiClickAudio` | 否 |
 
 ---
 
@@ -162,7 +170,7 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 - `EnvironmentFacade.cs`:环境唯一入口,暴露 `LevelManager`(放在 `SceneRoot`,与 `LevelManager` 同 GO)。
 - `LevelGoal.cs`:终点 Trigger,**用 `Player` 标签**识别玩家;进入 → `Fulfilled=true` + 广播 `Changed`。
 - `LevelGoalAndOperator.cs` / `LevelGoalOrOperator.cs`:组合条件(全部 / 任一达成),自身也实现 `ILevelGoal`。
-- `LevelManager.cs`:场景本地门面,持有 `rootCondition`;满足时广播一次 `LevelCleared`。
+- `LevelManager.cs`:场景本地门面,持有 `rootCondition`;满足时广播一次 `LevelCleared`。另有 `NotifyFailed()` / `LevelFailed` 供关卡自定义失败条件使用;通关与失败互斥,先到者胜。
 - `Hazard.cs`:危险 Trigger → `GetComponentInParent<IKillable>()?.Kill()`。
 - `LevelProgressTracker.cs`:与 `LevelManager` 同 GO,未连线时 `GetComponent`。
 - `MovingPlatform.cs`:kinematic 刚体往返,把自身位移带给站在上面的刚体(最小实现)。
@@ -170,9 +178,9 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 
 ### 7.4 Game(`Basic2DPlatformer.Game`)
 
-- `GameStateManager` / `GameState`：全局状态；无 owner 计数冻结接口。
+- `GameStateManager` / `GameState`：只维护 `Playing` / `Loading`;不施加时间或音频机制。
+- `TimeScaleManager`：暂停与速度都按 owner 计数,是 `Time.timeScale` 的唯一写入者;`ResetAll()` 供场景切换。
 - `AudioSettings` 位于 `Game/Setting/`。
-- `FreezeCoordinator`：owner 集合；面板冻结由 UI 的 `UiPanel` 发起。
 - Progress：`GameProgress` / `LevelProgressStore` 在 Game；`LevelProgressTracker` 在 Level；`LevelCount = 1`。
 - Save：`ISaveContributor` 在 Contracts；`SaveSystem` / `GameSaveStore` / `SaveEnvelope` 在 Game；`GameProgressContributor` 固定 key `progress`。
 - 存档流程：扫描贡献者 → `CanCapture` → `Capture` → 临时文件 → 替换 `GameSave.json`；失败不触碰正式文件。
@@ -181,10 +189,14 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 
 ### 7.5 UI(`Basic2DPlatformer.UI`)
 
-- 面板统一挂 `UiPanel`（显隐 + 焦点还原 + 可选冻结）；按钮行为由按钮组件携带数据完成。
+- 面板统一挂 `UiPanel`（显隐 + 焦点还原 + 可选冻结 + 打开栈）；按钮行为由按钮组件携带数据完成。
+- `UiPanel.TopOpen` 返回最后打开的面板；`freezeWhileOpen` 通过 `TimeScaleManager.PushPause/PopPause` 生效。
 - `SettingsScreen`：音量存取与保存后应用。
 - `NextLevelScreen`：订阅 `EnvironmentFacade.Level.LevelCleared`，打开通关面板。
 - `DeathScreen`：订阅 `PlayerDeath.PlayerDied`，打开死亡面板，广播 `Confirmed`。
+- `UiHotkeys`：空格开关暂停面板，Esc 关闭最上层面板（没有时打开暂停）。
+- `UiPointer.IsPointerOverBlockingUi()`：区分“被真正的 UI 挡住”与“只命中全屏点击层”。
+- `UiClickAudio`：挂在 `ClickScreen.prefab` 上时可播放空白点击音效；面板本身不含音效。
 - `UI → Player`（死亡事件）与 `UI → Level`（环境门面）；不直接依赖 Character。
 - 文案为英文占位；`SelectableAudio` 处理交互音效。
 - 面板默认未激活；开关走 `UiPanel`。
@@ -198,6 +210,11 @@ Editor  → { Infra, Core, Game, UI }(传递可见全部)
 - `Master.mixer` 暴露 `MasterVolume` / `OstVolume` / `SfxVolume`。
 - `AudioManager.ApplyAudioSettings(float master, float ost, float sfx)` 按 dB 换算写入 mixer。
 - `AudioManager.Start` 读取 `SettingBootstrap.Settings.Audio` 并应用；`SettingsScreen` 保存后调用 `ApplyAudioSettings` 立即生效。
+- `AudioId` 是只序列化 `path` 的值类型，实现 `LayeredId` 的 `ILayeredId`；`AudioCatalog` 用 `public const string` 声明合法路径。
+- `AudioManager.BuildClipIndex` 在 `Awake` 建立 `Dictionary<AudioId, AudioClipData>`；重复/空 ID 会告警。
+- 新增音效 = 建 `AudioClipData` + 在 `AudioCatalog` 加一行 `const` + 拖进 `AudioManagerConfigs`；需求见 [Subsystems/Audio.md](Subsystems/Audio.md)。
+- `AudioBuilder` 的 `WithVolume/WithPitch` 只覆盖本次播放；`WithRandomPitch` 以 1 为基准。
+- `startupOst` + `playOnStart` 在 `Start` 播放启动音乐，替代硬编码。
 
 ---
 

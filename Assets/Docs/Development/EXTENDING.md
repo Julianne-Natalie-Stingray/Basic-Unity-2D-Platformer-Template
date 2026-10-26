@@ -29,12 +29,14 @@
 1. 面板本身挂 `UiPanel`: 它负责显隐、焦点还原与可选冻结;不要直接 `SetActive`,也不要写 `Time.timeScale`。
 2. 需要订阅游戏事件时,在常驻的 Canvas 根(`UiRoot`)下新增脚本;按钮行为优先复用 `SceneSwitchButton` / `OpenPanelButton` / `QuitGameButton` / `NewGameButton` / `ContinueButton` / `SaveButton`,不要在屏幕脚本里写按钮方法。
 3. 面板默认未激活;打开用 `UiPanel.Open()`,关闭用 `UiPanel.Close()`(可接到按钮的持久监听)。
-4. 新增屏幕 = 新脚本 + 场景内面板/预制体,不修改共享脚本。
+4. `UiPanel` 自带打开栈:`TopOpen` 是最上层,`UiHotkeys` 的 Esc 按该顺序关闭。
+5. 新增屏幕 = 新脚本 + 场景内面板/预制体,不修改共享脚本。
 
 ## ④ 加输入动作
 
-- 用工具窗口 `Tools/Basic2DPlatformer/Project` 的 **Input** 标签页增删 action/binding;它写回 `.inputactions` 并触发 `PlayerControls.cs` 重生成。
-- 再在 `Core/Managers/InputManager.cs` 上**手写**成对的事件转发(工具不改 Core 代码)。
+- 用工具窗口 `Tools/Basic2DPlatformer/Project` 的 **Input** 标签页增删 action/binding；它写回 `.inputactions` 并触发 `PlayerControls.cs` 重生成。
+- 再在 `Core/Scripts/Persistent/InputManager.cs` 上**手写**成对的事件转发（工具不改 Core 代码）。
+- 现有动作：`PrimaryPress`、`PointerPosition`、`Left/Right/Up/Down`、`MovementInput`、`Interact`、`Pause`(空格)、`Cancel`(Esc)。
 - `.inputactions` 是共享文件,改动需知会;`PlayerControls.cs` 是生成物,不手改。
 
 ## ⑤ 加玩家能力
@@ -76,3 +78,29 @@
 5. 场景贡献者由 `SaveService` 在 `sceneLoaded` 后等一帧,用 `FindObjectsByType(..., FindObjectsInactive.Include)` 扫描当前活动场景;`DontDestroyOnLoad` 与 additive 场景不参与。
 6. 信封固定为 `version + sections[]`;新增 section 不改变信封。新 section 的 key 一旦发布就不要改名,内部 schema 由贡献者自己维护。
 7. 改完跑 `Assets/Tests/EditMode` 的 `SaveSystemTests`,并补一条覆盖 `CanCapture` 失败/恢复的测试。
+
+## ⑩ 加分层 ID 域
+
+> 完整流程与规则见 `Assets/LayeredId/README.md`。
+
+1. 在目标子系统新增 ID 值类型:`[Serializable] struct XxxId : ILayeredId`,序列化字段必须叫 `path`。
+2. 新增目录类:`[LayeredIdCatalog] public sealed class XxxCatalog : LayeredIdCatalog`,只放 `public const string`。
+3. 在 `Assets/Editor` 新增 3 行抽屉:
+   `[CustomPropertyDrawer(typeof(XxxId))] class XxxIdDrawer : LayeredIdDrawer { protected override Type CatalogType => typeof(XxxCatalog); }`。
+4. asmdef:ID 所属程序集引用 `GrignardReagent.LayeredId`;抽屉所属 `Basic2DPlatformer.Editor` 已引用 `GrignardReagent.LayeredId.Editor`。
+5. 新增条目只加一行 `const`;路径发布后视为冻结(改路径等于换 ID)。
+6. 打开 `Tools/GrignardReagent/Layered Id Catalogs` 校验重复与空路径。
+
+## ⑪ 加关卡失败条件
+
+1. 在关卡内新增组件,拿到 `LevelManager`(序列化引用或 `FindObjectOfType`)。
+2. 条件成立时调用 `NotifyFailed()`;重复调用、以及"已通关后调用"都是空操作。
+3. 失败表现订阅 `LevelManager.LevelFailed`;不要在关卡脚本里直接开面板。
+4. 纯失败关卡仍需要一个 `ILevelGoal` 占位给 `rootCondition`,否则 `LevelManager` 会禁用自己。
+
+## ⑫ 加空白点击层
+
+1. 把 `Assets/UI/Prefabs/ClickScreen.prefab` 拖到 `UiRoot` 下,设为**第一个子物体**。
+2. 需要空白点击音效时,给该实例加 `UiClickAudio`,`clickSfx` 选目录里的 cue。
+3. 世界指针玩法判断遮挡用 `UiPointer.IsPointerOverBlockingUi()`;不要用 `EventSystem.current.IsPointerOverGameObject()`。
+4. 不需要就不要加:它会成为全屏射线目标。
