@@ -389,6 +389,45 @@ tags:
 - `SurviveFreeze` / `DefaultSurviveFreeze` / `AllowWhileFrozen` 的 API 名保留;语义现在对应 `TimeScaleManager.IsPaused`,重命名留待需要时统一做。
 - `AudioListener.pause` 现在只有 `AudioManager` 一个写入者;若场景没有 AudioManager,则不会暂停音频。
 - 场景切换时仍会出现 "Another TimerRunner already exists" 与 "A second Core was found" 两条既有告警(新场景的 Core 被持久 Core 销毁),与本次改动无关。
+
+# 11    Phase 5 验收
+
+> 提交:`d0722b8 feat(ui): 添加键盘暂停与逐层关闭面板`
+
+### 输入
+
+- `PlayerControls.inputactions` 新增两个按钮动作并重新生成 `PlayerControls.cs`:
+  - `Pause` → `<Keyboard>/space`
+  - `Cancel` → `<Keyboard>/escape`
+- 空格原本未绑定(跳跃是 `Up` 的 `upArrow` / `W`),因此不存在冲突。
+- `InputManager` 新增 `PausePressed` / `CancelPressed` 事件,在 `OnEnable` 订阅、`OnDisable` 退订。
+
+### UI
+
+- `UiPanel` 增加静态打开栈:
+  - `OnEnable` 把自己移到栈顶,`OnDisable` 移除;
+  - `public static UiPanel TopOpen` 返回最后打开的面板。
+- 新增 `UiHotkeys`(挂在 `SampleLevel` 的 `UiRoot`,持有 `pausePanel` 引用):
+  - 空格:无面板时打开暂停;栈顶是暂停面板时关闭;栈顶是其他面板时不动作。
+  - Esc:关闭栈顶面板;无面板时打开暂停。
+  - Core 尚未就绪时逐帧重试绑定,直到拿到 `InputManager`。
+
+### 验收
+
+- 编译无 error / warning;EditMode 23/23。
+- PlayMode:
+  - `UiHotkeys` 绑定成功(`pauseSubscribers=1`);
+  - 调用 `InputManager` 的暂停回调 → `PausePanel` 打开、`IsPaused=True`、`timeScale=0`;
+  - 再次暂停 → 关闭并恢复 `scale=1`;
+  - 先打开 `SettingsPanel`,再按暂停 → 栈顶仍是 `SettingsPanel`,不动作;
+  - Esc → 关闭 `SettingsPanel`;无面板时 Esc → 打开 `PausePanel`;
+  - 面板栈与 `TimeScaleManager` 的 owner 计数同步。
+
+### 边界
+
+- 真实键盘注入未跑通:编辑器窗口失焦时 Input System 不处理注入的设备状态。绑定路径已在 `.inputactions` 与生成的 `PlayerControls` 中核对,`InputManager` 事件到 `UiHotkeys` 的链路用回调实测。
+- 只有 `SampleLevel` 有 `PausePanel`,因此只在该场景接线;`MainMenu` / `Final` 未挂 `UiHotkeys`。
+- `UiHotkeys` 用 `FindObjectOfType<InputManager>()` 兜底,因此即使 `CoreFacade` 尚未初始化也能绑定;不依赖脚本执行顺序。
    
    ### 回复
    
