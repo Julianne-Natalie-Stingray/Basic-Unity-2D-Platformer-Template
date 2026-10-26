@@ -269,6 +269,56 @@ tags:
 - 模板的 `Basic2DPlatformer.Editor` 尚未引用 `GrignardReagent.LayeredId.Editor`;Phase 2 添加 `AudioIdDrawer` 时才需要。
 - `LayeredIdCatalogEditor` 目前没有实际目录可展示(第一个消费者是 Phase 2 的 `AudioCatalog`)。
 - 生成器(Identifier 页)、包 README / CHANGELOG 按决策留到抽包前。
+
+# 8    Phase 2 验收
+
+> 提交:`1bdbde0 feat(audio): AudioId 路径化并接入 LayeredId 包`、`ff7d120 chore(audio): 迁移 AudioId 资产/场景/预制体字段`、`627203d fix(layered-id): 目录校验改为编辑器窗口`
+
+### 代码
+
+- `AudioId`:enum → `[Serializable] struct` + `ILayeredId`,序列化单个 `path`,Ordinal 相等性,`None` / `From` / `ToString` 保持。
+- 新增 `AudioCatalog`:`[LayeredIdCatalog]`,`Sfx/UI/MouseClick`、`Sfx/Generic`、`Ost/Generic`。
+- `AudioBuilder`:`volumeSet` / `pitchSet` 标记,只把真正设置过的覆盖值传给 manager;`WithRandomPitch` 以 1 为基准。
+- `AudioEmitter`:
+  - `Play(float?, float?)`,未覆盖时回落 clip 的 baseline;
+  - 缺 clip 时 `Complete(false)` 通知结束,修复池租约泄漏;
+  - 自然播完走 `StopNaturally()` → `Complete(true)`,修复 `IsFinished` 恒假;
+  - `ResetEmitter` 不再清 `isFinished`,由下一次 `Play` 重置。
+- `AudioManager`:`Dictionary<AudioId, AudioClipData>` 索引替代 `FirstOrDefault`;重复/空 ID 在 Awake 告警;新增 `startupOst` + `playOnStart`,替换硬编码。
+- `AudioManagerConfigs`:移除 `TryGetClip`,暴露 `Audios`。
+- 新增 `Assets/Editor/AudioIdDrawer.cs`(3 行绑定)、`Assets/Editor/AudioManagerConfigsEditor.cs`(分组/去重/空/目录外校验、增删)。
+- 新增 `Assets/Tests/EditMode/AudioIdTests.cs`(4 条)。
+
+### 数据迁移(84 处 + 3 个资产)
+
+| 文件 | 字段数 |
+| --- | --- |
+| `MainMenu.unity` | 20(`downSfx` 2 处 → `Sfx/UI/MouseClick`) |
+| `SampleLevel.unity` | 30 |
+| `Final.unity` | 5 |
+| `SettingsPanel.prefab` | 25 |
+| `Player.prefab` | 3 |
+| `Core.prefab` | 1(`debugAudioRequest` → `Ost/Generic`) |
+| `Sounds/SO/*.asset` | 3(`audioId` → 路径) |
+
+### 验收
+
+- 编译:无 error / warning。
+- EditMode:18/18 通过(新增 4 条音频 ID 测试)。
+- PlayMode 冒烟(进入实际游戏场景):
+  - `CoreFacade.Instance.Audio` 可用,`GameState = Playing`;
+  - 启动 OST 自动播放(`Ost/Generic`,`loop=1`);
+  - `CreateBuilder().WithVolume(0.5f).WithPitch(1.25f).Play(MouseClick)` → 实际 `AudioSource.volume = 0.5`、`pitch = 1.25`,覆盖参数修复生效;
+  - 冻结期间请求被拒(`Request ... refused: the game is frozen`),冻结门仍有效;
+  - 点击音自然播完后有 `AudioEmitter is released.`,池租约归还正常。
+
+### 偏差与遗留
+
+- **目录 Inspector 改为编辑器窗口**。`LayeredIdCatalog` 是普通类,不是 `UnityEngine.Object`,`[CustomEditor]` 无法挂载。改为 `Tools/GrignardReagent/Layered Id Catalogs`:按 `[LayeredIdCatalog]` 扫描,列出成员与问题,并对未打标的目录告警。验收清单第 2 条的"目录 Inspector"由该窗口承接。
+- `AudioListener.pause` 仍由 `GameStateManager` 与 `AudioManager` 双重写入;Phase 4 合并 `TimeScaleManager` 时收敛为单一归属。
+- `variants` / `RandomMode` / `PitchJitter` 按决策延后,均为 `AudioClipData` 的纯增量字段。
+- `IsFinished` 通过"自然播完后释放池"间接验证;句柄事件本身由代码路径保证,未写 PlayMode 测试。
+- `AudioIdDrawer` / `AudioManagerConfigsEditor` 的实际观感需在 Inspector 中人工确认。
    
    ### 回复
    
