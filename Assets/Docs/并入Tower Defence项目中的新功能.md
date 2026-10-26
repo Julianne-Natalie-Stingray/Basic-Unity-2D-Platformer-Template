@@ -457,6 +457,36 @@ tags:
 - `LevelFailed` 是扩展点,示例场景没有生产者;`DeathScreen` 仍订阅 `PlayerDied`,`NextLevelScreen` 仍订阅 `LevelCleared`,均未改动。
 - 自定义失败条件(计时、护送、越界)在关卡脚本里拿到 `LevelManager` 引用后调用 `NotifyFailed()` 即可;用法写入 `EXTENDING.md`(Phase 7)。
 - 既有约束仍在:`LevelManager.Start` 要求 `rootCondition` 非空,否则组件会被禁用;纯失败关卡需要一个 `ILevelGoal` 占位。
+
+# 13    Phase 7 验收
+
+> 提交:`aee1730 docs: 同步并入 Tower Defence 后的架构与验收`、`1d898fa fix(ui): 为主菜单补充 CanvasScaler`
+
+### 文档
+
+- `Development/ARCHITECTURE.md`:登记 `GrignardReagent.LayeredId` / `.Editor`、新的依赖边、`LayeredId` 子系统行、拓展点 ⑨–⑫、四条新硬约定。
+- `Development/Design.md`:包含范围、目录树、asmdef 表、拓展点、Game/UI/Level 设计、音频 ID/目录/启动 OST。
+- `Development/EXTENDING.md`:更新 ③/④;新增 ⑩ 分层 ID 域、⑪ 关卡失败条件、⑫ 空白点击层。
+- `Development/Onboarding.md` / `Packages.md`:登记 `LayeredId` 与“抽包前不是 UPM”的约束。
+- `Subsystems/Core.md` / `Game.md` / `Level.md` / `UI.md`:同步输入动作、`TimeScaleManager`、失败通道、打开栈、点击层与热键。
+- 新增 `Subsystems/Audio.md`:标识/目录、播放门、暂停语义、编辑器工具、新增音效流程。
+- `Manual/Verification.md`:资源清单、`SampleLevel` 组成、音频/时间/热键/点击层/失败通道验收步骤;修正“Space 跳跃”的过期描述(实际为 `W` / `↑`)。
+- 新增 `Assets/LayeredId/README.md`(从新建 ID 到使用的全流程、规则、校验、抽包步骤)与 `CHANGELOG.md`。
+
+### 顺手修复
+
+- `MainMenu.unity` 的 `UiRoot` 补齐 `CanvasScaler`(ScaleWithScreenSize,1280×720,MatchWidthOrHeight=0),与 `SampleLevel` 一致。这是第五轮确认的三个模板 bug 中的最后一个;前两个(`IsFinished` 恒假、缺 clip 泄漏池租约)已在 Phase 2 修复。
+
+### 验收
+
+- 编译无 error / warning;EditMode 26/26。
+- `git status` 干净。
+
+### 结束状态
+
+- 七个阶段全部完成,实现与文档同步;`Assets/LayeredId` 保持源码形态,程序集名已是最终名。
+- 抽包按决策等待第二个消费方(塔防项目)接入后再做;`Assets/LayeredId/README.md` §抽包步骤已写好。
+- 未纳入:2.5D 固定相机 / NavMesh / 战斗注册表 / 波次 / 建造 / 经济 / 敌人 / 关卡目录(按第一轮决定全部留在塔防项目)。
    
    ### 回复
    
