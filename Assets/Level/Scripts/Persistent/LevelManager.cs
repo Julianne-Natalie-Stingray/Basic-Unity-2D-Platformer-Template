@@ -15,8 +15,17 @@ public sealed class LevelManager : MonoBehaviour
     /// <summary>是否已通关.</summary>
     public bool IsCleared { get; private set; }
 
+    /// <summary>是否已失败; 与 IsCleared 互斥, 先到者胜.</summary>
+    public bool IsFailed { get; private set; }
+
+    /// <summary>是否已经出结果(通关或失败).</summary>
+    public bool IsResolved => IsCleared || IsFailed;
+
     /// <summary>首次满足根条件时触发一次.</summary>
     public event Action LevelCleared;
+
+    /// <summary>首次判定失败时触发一次; 由关卡自定义失败条件调用 NotifyFailed.</summary>
+    public event Action LevelFailed;
 
     private ILevelGoal levelGoal;
 
@@ -66,10 +75,20 @@ public sealed class LevelManager : MonoBehaviour
 
     private void Clear()
     {
-        if (IsCleared)
+        if (IsResolved)
             return;
 
         IsCleared = true;
         LevelCleared?.Invoke();
+    }
+
+    /// <summary>供关卡自定义失败条件调用(计时、护送、越界等); 已出结果时为空操作.</summary>
+    public void NotifyFailed()
+    {
+        if (IsResolved)
+            return;
+
+        IsFailed = true;
+        LevelFailed?.Invoke();
     }
 }

@@ -5,6 +5,7 @@
         "Basic2DPlatformer.Game",
         "Basic2DPlatformer.Contracts",
         "Basic2DPlatformer.Core",
+        "Basic2DPlatformer.Level",
         "GrignardReagent.LayeredId",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
