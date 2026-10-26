@@ -319,6 +319,42 @@ tags:
 - `variants` / `RandomMode` / `PitchJitter` 按决策延后,均为 `AudioClipData` 的纯增量字段。
 - `IsFinished` 通过"自然播完后释放池"间接验证;句柄事件本身由代码路径保证,未写 PlayMode 测试。
 - `AudioIdDrawer` / `AudioManagerConfigsEditor` 的实际观感需在 Inspector 中人工确认。
+
+# 9    Phase 3 验收
+
+> 提交:`26ddaca feat(ui): 添加可选的空白点击层与点击音效模块`
+
+### 交付物
+
+| 文件 | 说明 |
+| --- | --- |
+| `Assets/UI/Prefabs/ClickScreen.prefab` | 全屏拉伸的透明 `Image`(`raycastTarget=1`、`maskable=0`、alpha 0) + `PassThroughUi`;**不含**任何音效组件 |
+| `Assets/Core/Scripts/Visuals/PassThroughUi.cs` | 空标记,供世界输入判定忽略该层 |
+| `Assets/UI/Scripts/UiPointer.cs` | `IsPointerOverBlockingUi()`:射线命中不在 `PassThroughUi` 之下即视为阻挡 |
+| `Assets/UI/Scripts/ScriptComponents/UiClickAudio.cs` | 左键 `IPointerDown` → 序列化 cue;`AllowWhileFrozen + SurviveFreeze` |
+
+### 接线方式(不写进场景)
+
+1. 把 `ClickScreen.prefab` 拖到 `UiRoot` 下,并设为**第一个子物体**(保证按钮优先消费点击)。
+2. 需要点击音效时,给该实例加 `UiClickAudio`,`clickSfx` 选 `Sfx/UI/MouseClick`。
+
+世界指针玩法判断遮挡时使用 `UiPointer.IsPointerOverBlockingUi()`,不要用 `EventSystem.current.IsPointerOverGameObject()`——后者会被全屏点击层永久置真。
+
+### 验收
+
+- 编译无 error / warning。
+- EditMode:18/18 通过。
+- PlayMode 冒烟(临时实例化到 `UiRoot` 首位):
+  - 屏幕中心 `blocking@center = False`(只命中点击层);
+  - `MenuButton` 位置 `blocking@menuButton = True`(真实 UI 阻挡);
+  - 模拟左键 `pointerDown` → `clickPlaying = True`(`click` clip 实际发声);
+  - 销毁实例后无残留。
+
+### 边界
+
+- 预制体为 opt-in,未加入任何示例场景。
+- `IsPointerOverBlockingUi()` 依赖 `CoreFacade` 提供的指针位置;无 Core 时返回 false。
+- `UiClickAudio` 未做双重播放防护:它只应挂在最低层的点击层上;挂在按钮上会与 `SelectableAudio` 叠加。
    
    ### 回复
    
