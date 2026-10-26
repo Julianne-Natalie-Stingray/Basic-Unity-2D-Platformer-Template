@@ -98,6 +98,24 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Pause"",
+                    ""type"": ""Button"",
+                    ""id"": ""b1a2c3d4-0003-4a00-9000-0000000000f3"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Cancel"",
+                    ""type"": ""Button"",
+                    ""id"": ""b1a2c3d4-0004-4a00-9000-0000000000f4"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -276,6 +294,28 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""action"": ""Interact"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b1a2c3d4-0005-4a00-9000-0000000000f5"",
+                    ""path"": ""<Keyboard>/space"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Pause"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b1a2c3d4-0006-4a00-9000-0000000000f6"",
+                    ""path"": ""<Keyboard>/escape"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cancel"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -292,6 +332,8 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         m_Gameplay_Down = m_Gameplay.FindAction("Down", throwIfNotFound: true);
         m_Gameplay_MovementInput = m_Gameplay.FindAction("MovementInput", throwIfNotFound: true);
         m_Gameplay_Interact = m_Gameplay.FindAction("Interact", throwIfNotFound: true);
+        m_Gameplay_Pause = m_Gameplay.FindAction("Pause", throwIfNotFound: true);
+        m_Gameplay_Cancel = m_Gameplay.FindAction("Cancel", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -361,6 +403,8 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_Down;
     private readonly InputAction m_Gameplay_MovementInput;
     private readonly InputAction m_Gameplay_Interact;
+    private readonly InputAction m_Gameplay_Pause;
+    private readonly InputAction m_Gameplay_Cancel;
     public struct GameplayActions
     {
         private @PlayerControls m_Wrapper;
@@ -373,6 +417,8 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         public InputAction @Down => m_Wrapper.m_Gameplay_Down;
         public InputAction @MovementInput => m_Wrapper.m_Gameplay_MovementInput;
         public InputAction @Interact => m_Wrapper.m_Gameplay_Interact;
+        public InputAction @Pause => m_Wrapper.m_Gameplay_Pause;
+        public InputAction @Cancel => m_Wrapper.m_Gameplay_Cancel;
         public InputActionMap Get() { return m_Wrapper.m_Gameplay; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -406,6 +452,12 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Interact.started += instance.OnInteract;
             @Interact.performed += instance.OnInteract;
             @Interact.canceled += instance.OnInteract;
+            @Pause.started += instance.OnPause;
+            @Pause.performed += instance.OnPause;
+            @Pause.canceled += instance.OnPause;
+            @Cancel.started += instance.OnCancel;
+            @Cancel.performed += instance.OnCancel;
+            @Cancel.canceled += instance.OnCancel;
         }
 
         private void UnregisterCallbacks(IGameplayActions instance)
@@ -434,6 +486,12 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Interact.started -= instance.OnInteract;
             @Interact.performed -= instance.OnInteract;
             @Interact.canceled -= instance.OnInteract;
+            @Pause.started -= instance.OnPause;
+            @Pause.performed -= instance.OnPause;
+            @Pause.canceled -= instance.OnPause;
+            @Cancel.started -= instance.OnCancel;
+            @Cancel.performed -= instance.OnCancel;
+            @Cancel.canceled -= instance.OnCancel;
         }
 
         public void RemoveCallbacks(IGameplayActions instance)
@@ -461,5 +519,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         void OnDown(InputAction.CallbackContext context);
         void OnMovementInput(InputAction.CallbackContext context);
         void OnInteract(InputAction.CallbackContext context);
+        void OnPause(InputAction.CallbackContext context);
+        void OnCancel(InputAction.CallbackContext context);
     }
 }

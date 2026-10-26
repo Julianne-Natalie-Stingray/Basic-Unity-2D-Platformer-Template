@@ -21,6 +21,12 @@ public sealed class InputManager : MonoBehaviour
     public event Action InteractPressed;
     public event Action InteractReleased;
 
+    /// <summary>暂停按钮(当前绑定空格)的按下; 只发布设备层, 是否真的暂停由 UI 决定.</summary>
+    public event Action PausePressed;
+
+    /// <summary>取消按钮(当前绑定 Esc)的按下; 用于逐层关闭面板.</summary>
+    public event Action CancelPressed;
+
     /// <summary>屏幕空间的指针位置; 模版不附带消费者.</summary>
     public Vector2 PointerPosition => controls == null
             ? Vector2.zero
@@ -51,6 +57,8 @@ public sealed class InputManager : MonoBehaviour
         controls.Gameplay.Up.canceled += HandleUpReleased;
         controls.Gameplay.Interact.performed += HandleInteractPressed;
         controls.Gameplay.Interact.canceled += HandleInteractReleased;
+        controls.Gameplay.Pause.performed += HandlePausePressed;
+        controls.Gameplay.Cancel.performed += HandleCancelPressed;
 
         controls.Gameplay.Enable();
     }
@@ -63,6 +71,8 @@ public sealed class InputManager : MonoBehaviour
         controls.Gameplay.Up.canceled -= HandleUpReleased;
         controls.Gameplay.Interact.performed -= HandleInteractPressed;
         controls.Gameplay.Interact.canceled -= HandleInteractReleased;
+        controls.Gameplay.Pause.performed -= HandlePausePressed;
+        controls.Gameplay.Cancel.performed -= HandleCancelPressed;
 
         controls.Gameplay.Disable();
     }
@@ -87,4 +97,10 @@ public sealed class InputManager : MonoBehaviour
 
     private void HandleInteractReleased(InputAction.CallbackContext context)
         => InteractReleased?.Invoke();
+
+    private void HandlePausePressed(InputAction.CallbackContext context)
+        => PausePressed?.Invoke();
+
+    private void HandleCancelPressed(InputAction.CallbackContext context)
+        => CancelPressed?.Invoke();
 }

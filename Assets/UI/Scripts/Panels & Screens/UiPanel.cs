@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -15,6 +16,11 @@ public sealed class UiPanel : MonoBehaviour
 
     /// <summary>打开期间是否冻结游戏; 菜单场景通常关闭.</summary>
     [SerializeField] private bool freezeWhileOpen;
+
+    private static readonly List<UiPanel> OpenPanels = new();
+
+    /// <summary>最近打开且仍激活的面板; 没有时为 null.</summary>
+    public static UiPanel TopOpen => OpenPanels.Count == 0 ? null : OpenPanels[OpenPanels.Count - 1];
 
     private GameObject previousSelection;
 
@@ -55,12 +61,17 @@ public sealed class UiPanel : MonoBehaviour
 
     private void OnEnable()
     {
+        OpenPanels.Remove(this);
+        OpenPanels.Add(this);
+
         if (freezeWhileOpen)
             TimeScaleManager.PushPause(this);
     }
 
     private void OnDisable()
     {
+        OpenPanels.Remove(this);
+
         if (freezeWhileOpen)
             TimeScaleManager.PopPause(this);
     }
