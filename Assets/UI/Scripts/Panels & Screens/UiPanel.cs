@@ -56,12 +56,12 @@ public sealed class UiPanel : MonoBehaviour
     private void OnEnable()
     {
         if (freezeWhileOpen)
-            FreezeCoordinator.Request(this);
+            TimeScaleManager.PushPause(this);
     }
 
     private void OnDisable()
     {
         if (freezeWhileOpen)
-            FreezeCoordinator.Release(this);
+            TimeScaleManager.PopPause(this);
     }
 }

@@ -41,12 +41,13 @@ public class AudioManager : MonoBehaviour
 
     private void OnEnable()
     {
-        GameStateManager.Changed += HandleGameStateChanged;
+        TimeScaleManager.Changed += HandleTimeScaleChanged;
+        HandleTimeScaleChanged();
     }
 
     private void OnDisable()
     {
-        GameStateManager.Changed -= HandleGameStateChanged;
+        TimeScaleManager.Changed -= HandleTimeScaleChanged;
     }
 
     private void OnDestroy()
@@ -205,7 +206,7 @@ public class AudioManager : MonoBehaviour
 
     private bool IsFrozenEntryAllowed(AudioId requested, bool? allowWhileFrozen, bool willSurviveFreeze)
     {
-        if (GameStateManager.Current != GameState.Freezed)
+        if (!TimeScaleManager.IsPaused)
             return true;
 
         if ((allowWhileFrozen ?? false) && willSurviveFreeze)
@@ -215,8 +216,8 @@ public class AudioManager : MonoBehaviour
             .Subsystem("Core")
             .Name(LogName.Class)
             .Issue(LogIssue.Specify(willSurviveFreeze
-                ? $"Request for {requested} refused: the game is frozen and the request did not allow entry. "
-                : $"Request for {requested} refused: the game is frozen and the playback would not be kept. "))
+                ? $"Request for {requested} refused: the game is paused and the request did not allow entry. "
+                : $"Request for {requested} refused: the game is paused and the playback would not be kept. "))
             .Action(LogAction.Ignore)
             .Write();
 
@@ -300,9 +301,9 @@ public class AudioManager : MonoBehaviour
     private void ReleaseEmitter(AudioEmitter emitter)
         => emitterPool.Release(emitter);
 
-    private void HandleGameStateChanged(GameState state)
+    private void HandleTimeScaleChanged()
     {
-        bool shouldPause = state == GameState.Freezed;
+        bool shouldPause = TimeScaleManager.IsPaused;
 
         if (AudioListener.pause == shouldPause)
             return;

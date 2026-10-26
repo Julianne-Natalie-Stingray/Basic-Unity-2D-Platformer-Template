@@ -49,6 +49,8 @@ public class SceneSwitchManager : MonoBehaviour
             return null;
         }
 
+        TimeScaleManager.ResetAll();
+
         operation = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
         isSwitching = true;
 
