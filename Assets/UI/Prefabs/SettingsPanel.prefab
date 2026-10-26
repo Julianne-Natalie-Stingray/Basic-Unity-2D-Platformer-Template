@@ -1079,11 +1079,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: -1
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path:
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!114 &6769765809992986788
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1200,11 +1205,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: -1
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path:
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!1 &4332849634308129352
 GameObject:
   m_ObjectHideFlags: 0
@@ -1553,11 +1563,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: -1
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path:
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!1 &5341466916024040458
 GameObject:
   m_ObjectHideFlags: 0
@@ -1987,11 +2002,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: -1
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path:
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!1 &6304372074153127930
 GameObject:
   m_ObjectHideFlags: 0
@@ -2285,11 +2305,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: -1
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path:
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!1 &8369967803473884510
 GameObject:
   m_ObjectHideFlags: 0

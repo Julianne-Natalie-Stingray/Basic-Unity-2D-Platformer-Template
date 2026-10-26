@@ -223,9 +223,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 250aa4f4fdc7f7f4e9775254b90f9fc6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  deathAudio: -1
-  moveAudio: -1
-  interactAudio: -1
+  deathAudio:
+    path:
+  moveAudio:
+    path:
+  interactAudio:
+    path:
 --- !u!114 &547962809111829738
 MonoBehaviour:
   m_ObjectHideFlags: 0

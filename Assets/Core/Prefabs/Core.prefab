@@ -121,7 +121,11 @@ MonoBehaviour:
   emitterRoot: {fileID: 4146299610822127981}
   configs: {fileID: 11400000, guid: 5d4cda4bd0712d2419d98c16618da387, type: 2}
   mixer: {fileID: 24100000, guid: a6b573f691acdc44a9421d10d0de8b7a, type: 2}
-  debugAudioRequest: 1
+  startupOst:
+    path: Ost/Generic
+  playOnStart: 1
+  debugAudioRequest:
+    path: Ost/Generic
   requestTime: 1
   DebugSurviveFreeze: 1
   DebugAllowWhileFrozen: 1

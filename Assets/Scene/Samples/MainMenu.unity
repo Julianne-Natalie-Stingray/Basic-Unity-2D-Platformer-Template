@@ -848,11 +848,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: 2
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path: Sfx/UI/MouseClick
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!114 &841532618
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1042,11 +1047,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: -1
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path:
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!222 &986147975
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1541,11 +1551,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: -1
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path:
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!222 &1581403629
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1829,11 +1844,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3829f6051a5220d4199818d91e75354d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hoverSfx: -1
-  downSfx: 2
-  upSfx: -1
-  submitSfx: -1
-  sliderChangedSfx: -1
+  hoverSfx:
+    path:
+  downSfx:
+    path: Sfx/UI/MouseClick
+  upSfx:
+    path:
+  submitSfx:
+    path:
+  sliderChangedSfx:
+    path:
 --- !u!222 &1991719928
 CanvasRenderer:
   m_ObjectHideFlags: 0
