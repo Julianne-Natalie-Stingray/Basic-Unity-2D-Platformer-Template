@@ -428,6 +428,35 @@ tags:
 - 真实键盘注入未跑通:编辑器窗口失焦时 Input System 不处理注入的设备状态。绑定路径已在 `.inputactions` 与生成的 `PlayerControls` 中核对,`InputManager` 事件到 `UiHotkeys` 的链路用回调实测。
 - 只有 `SampleLevel` 有 `PausePanel`,因此只在该场景接线;`MainMenu` / `Final` 未挂 `UiHotkeys`。
 - `UiHotkeys` 用 `FindObjectOfType<InputManager>()` 兜底,因此即使 `CoreFacade` 尚未初始化也能绑定;不依赖脚本执行顺序。
+
+# 12    Phase 6 验收
+
+> 提交:`87522b9 feat(level): 增加失败通道与互斥结果`
+
+### 代码
+
+- `LevelManager` 新增:
+  - `bool IsFailed`;
+  - `bool IsResolved`(`IsCleared || IsFailed`);
+  - `event Action LevelFailed`;
+  - `public void NotifyFailed()`。
+- 结果互斥,先到者胜:
+  - `Clear()` 与 `NotifyFailed()` 都以 `IsResolved` 为门;
+  - 通关后调用 `NotifyFailed` 为空操作,失败后满足根条件也不再生效。
+
+### 验收
+
+- 编译无 error / warning。
+- EditMode:26/26 通过(新增 3 条):
+  - `NotifyFailed_FiresOnce`;
+  - `ClearedThenFailed_KeepsCleared`;
+  - `FailedThenCleared_KeepsFailed`。
+
+### 边界
+
+- `LevelFailed` 是扩展点,示例场景没有生产者;`DeathScreen` 仍订阅 `PlayerDied`,`NextLevelScreen` 仍订阅 `LevelCleared`,均未改动。
+- 自定义失败条件(计时、护送、越界)在关卡脚本里拿到 `LevelManager` 引用后调用 `NotifyFailed()` 即可;用法写入 `EXTENDING.md`(Phase 7)。
+- 既有约束仍在:`LevelManager.Start` 要求 `rootCondition` 非空,否则组件会被禁用;纯失败关卡需要一个 `ILevelGoal` 占位。
    
    ### 回复
    
