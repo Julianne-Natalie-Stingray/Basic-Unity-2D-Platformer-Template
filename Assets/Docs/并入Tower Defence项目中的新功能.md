@@ -238,6 +238,37 @@ tags:
 - A
   
 - B 
+
+# 7    Phase 1 验收
+
+> 提交:`1ab696c feat(layered-id): 添加分层标识包骨架与 EditMode 测试`
+
+### 交付物
+
+| 文件 | 说明 |
+| --- | --- |
+| `Assets/LayeredId/Runtime/GrignardReagent.LayeredId.asmdef` | `autoReferenced = false`;`noEngineReferences = true`(运行时不依赖 UnityEngine) |
+| `Assets/LayeredId/Runtime/ILayeredId.cs` | `Path` / `IsValid` 值契约 |
+| `Assets/LayeredId/Runtime/LayeredIdCatalog.cs` | 反射 `DeclaredOnly` 的 `public const string`,生成排序路径、`HashSet` 查找、成员映射与校验问题;按 `Type` 缓存 |
+| `Assets/LayeredId/Runtime/LayeredIdCatalogAttribute.cs` | 目录发现标签 |
+| `Assets/LayeredId/Runtime/LayeredIdMember.cs` | 成员名 ↔ 路径 |
+| `Assets/LayeredId/Runtime/LayeredIdIssue.cs` | 校验问题载荷 |
+| `Assets/LayeredId/Editor/GrignardReagent.LayeredId.Editor.asmdef` | Editor 平台限定,引用 Runtime |
+| `Assets/LayeredId/Editor/LayeredIdDrawer.cs` | 读 `path` 子字段;`AdvancedDropdown` 按 `/` 分层;不在目录时画红底线 |
+| `Assets/LayeredId/Editor/LayeredIdCatalogEditor.cs` | 按 `/` 缩进展示成员;空路径/重复路径/空目录报 Error;未打标告警 |
+| `Assets/LayeredId/Tests/EditMode/LayeredIdCatalogTests.cs` | 5 条:排序、Ordinal 大小写、空路径、重复路径、空目录 |
+
+### 验收
+
+- 编译:通过(无 error / warning)。
+- 测试:`GrignardReagent.LayeredId.Tests` 5/5 通过;全量 EditMode 14/14 通过。
+- 文件命名与目录为抽包形态:`Runtime/` + `Editor/` + `Tests/` 可整体搬迁。
+
+### 已知边界
+
+- 模板的 `Basic2DPlatformer.Editor` 尚未引用 `GrignardReagent.LayeredId.Editor`;Phase 2 添加 `AudioIdDrawer` 时才需要。
+- `LayeredIdCatalogEditor` 目前没有实际目录可展示(第一个消费者是 Phase 2 的 `AudioCatalog`)。
+- 生成器(Identifier 页)、包 README / CHANGELOG 按决策留到抽包前。
    
    ### 回复
    
