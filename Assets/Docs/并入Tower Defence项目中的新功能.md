@@ -487,6 +487,34 @@ tags:
 - 七个阶段全部完成,实现与文档同步;`Assets/LayeredId` 保持源码形态,程序集名已是最终名。
 - 抽包按决策等待第二个消费方(塔防项目)接入后再做;`Assets/LayeredId/README.md` §抽包步骤已写好。
 - 未纳入:2.5D 固定相机 / NavMesh / 战斗注册表 / 波次 / 建造 / 经济 / 敌人 / 关卡目录(按第一轮决定全部留在塔防项目)。
+
+# 14    校验修复
+
+> 提交:`3ceb0a0 fix(editor): 登记 LayeredId 程序集与测试依赖`
+
+### 报告
+
+`[Basic2DPlatformer] 校验发现 5 个问题.`
+
+1. `Basic2DPlatformer.Tests.EditMode` 多出依赖:`Basic2DPlatformer.Core`
+2. `Basic2DPlatformer.Tests.EditMode` 多出依赖:`Basic2DPlatformer.Level`
+3. 未登记的 asmdef:`GrignardReagent.LayeredId`
+4. 未登记的 asmdef:`GrignardReagent.LayeredId.Editor`
+5. 未登记的 asmdef:`GrignardReagent.LayeredId.Tests`
+
+### 修复
+
+- `ProjectToolWindow` 的 expected 表登记三个新程序集:
+  - `GrignardReagent.LayeredId` → 无依赖;
+  - `GrignardReagent.LayeredId.Editor` → `GrignardReagent.LayeredId`;
+  - `GrignardReagent.LayeredId.Tests` → `GrignardReagent.LayeredId`。
+- `Core` / `Editor` / `Tests.EditMode` 的 expected 依赖补上 LayeredId 与 Core / Level。
+- 依赖过滤从“`Basic2DPlatformer` + `GrignardReagent.Pooling`”扩展为“`GrignardReagent.LayeredId*`”,否则新程序集之间的边不会被比较。
+
+### 复验
+
+- 反射调用 `ValidateArchitecture` → `architectureProblems=0`。
+- 完整 `Validate` → 控制台 `[Basic2DPlatformer] 校验通过, 无问题.`
    
    ### 回复
    
