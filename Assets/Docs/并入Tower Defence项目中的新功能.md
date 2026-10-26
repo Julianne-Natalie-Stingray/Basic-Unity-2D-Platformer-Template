@@ -355,6 +355,40 @@ tags:
 - 预制体为 opt-in,未加入任何示例场景。
 - `IsPointerOverBlockingUi()` 依赖 `CoreFacade` 提供的指针位置;无 Core 时返回 false。
 - `UiClickAudio` 未做双重播放防护:它只应挂在最低层的点击层上;挂在按钮上会与 `SelectableAudio` 叠加。
+
+# 10    Phase 4 验收
+
+> 提交:`ab75d04 refactor(time): 合并暂停与速度到 TimeScaleManager`
+
+### 代码
+
+- 新增 `Game/Scripts/TimeScale/TimeScaleManager.cs`:
+  - `PushPause/PopPause` 按 owner 计数;`IsPaused` 读取时清理已销毁 owner;
+  - `SetSpeed/ClearSpeed` 按 owner 记录,多 owner **相乘**并钳制 `0.1..4`;
+  - `EffectiveScale = IsPaused ? 0 : speed`,是 `Time.timeScale` 的唯一取值来源;
+  - `ResetAll()` 清空请求并恢复 1 倍;`Changed` 在暂停/速度实际变化时触发。
+- 删除 `FreezeCoordinator`。
+- `GameStateManager` 只保留 `Playing` / `Loading` 与 `EnterLoading` / `ExitLoading`;移除 `Freezed`、`Changed`、`Freeze`、`Resume`、`timeScaleBeforeFreeze`。
+- `UiPanel` 的 `freezeWhileOpen` 改为 `TimeScaleManager.PushPause(this)` / `PopPause(this)`。
+- `AudioManager` 的 `AudioListener.pause` 改为订阅 `TimeScaleManager.Changed` 并读取 `IsPaused`;冻结门改判 `IsPaused`。
+- `SceneSwitchManager.RequestSwitch` 在发起加载前调用 `TimeScaleManager.ResetAll()`。
+
+### 验收
+
+- 编译无 error / warning。
+- EditMode:23/23 通过(新增 5 条:`PauseOverridesSpeed`、`TwoOwnersRequireBothToRelease`、`SpeedRequestsMultiply`、`DestroyedOwnerIsPurged`、`ResetAllRestoresScale`)。
+- PlayMode:
+  - 打开 `PausePanel` → `IsPaused=True`、`Time.timeScale=0`、`AudioListener.pause=True`、`GameState=Playing`;
+  - 手动 `PushPause` 后 `RequestSwitch(MainMenu)`:`op != null`、`IsSwitching=True`,同一帧 `paused=False / scale=1 / audioPause=False`;
+  - 加载完成后:`scene=MainMenu`、`paused=False`、`scale=1`、`audioPause=False`、`state=Playing`、`isSwitching=False`。
+
+### 说明
+
+- 旧的 `Resume()` 不再存在,因此"加载中面板关闭把 `Loading` 改回 `Playing`"的路径被结构性移除;`ResetAll` 也不会回写 `GameState`。
+- 速度采用乘积而非 `max`:单个 `0.5` 请求就是慢动作,多个请求相乘;`max` 会让单个慢动作请求被 1 倍基线吞掉。
+- `SurviveFreeze` / `DefaultSurviveFreeze` / `AllowWhileFrozen` 的 API 名保留;语义现在对应 `TimeScaleManager.IsPaused`,重命名留待需要时统一做。
+- `AudioListener.pause` 现在只有 `AudioManager` 一个写入者;若场景没有 AudioManager,则不会暂停音频。
+- 场景切换时仍会出现 "Another TimerRunner already exists" 与 "A second Core was found" 两条既有告警(新场景的 Core 被持久 Core 销毁),与本次改动无关。
    
    ### 回复
    
