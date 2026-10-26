@@ -259,6 +259,7 @@ public class ProjectToolWindow : EditorWindow
                 "Basic2DPlatformer.Infra",
                 "Basic2DPlatformer.Game",
                 "Basic2DPlatformer.Contracts",
+                "GrignardReagent.LayeredId",
                 "GrignardReagent.Pooling"
             },
             ["Basic2DPlatformer.Level"] = new[]
@@ -284,12 +285,26 @@ public class ProjectToolWindow : EditorWindow
                 "Basic2DPlatformer.Infra",
                 "Basic2DPlatformer.Core",
                 "Basic2DPlatformer.Game",
-                "Basic2DPlatformer.UI"
+                "Basic2DPlatformer.UI",
+                "GrignardReagent.LayeredId",
+                "GrignardReagent.LayeredId.Editor"
             },
             ["Basic2DPlatformer.Tests.EditMode"] = new[]
             {
                 "Basic2DPlatformer.Game",
-                "Basic2DPlatformer.Contracts"
+                "Basic2DPlatformer.Contracts",
+                "Basic2DPlatformer.Core",
+                "Basic2DPlatformer.Level",
+                "GrignardReagent.LayeredId"
+            },
+            ["GrignardReagent.LayeredId"] = new string[0],
+            ["GrignardReagent.LayeredId.Editor"] = new[]
+            {
+                "GrignardReagent.LayeredId"
+            },
+            ["GrignardReagent.LayeredId.Tests"] = new[]
+            {
+                "GrignardReagent.LayeredId"
             }
         };
 
@@ -318,6 +333,7 @@ public class ProjectToolWindow : EditorWindow
             foreach (string reference in references)
             {
                 if (reference.StartsWith("Basic2DPlatformer", StringComparison.Ordinal) ||
+                    reference.StartsWith("GrignardReagent.LayeredId", StringComparison.Ordinal) ||
                     reference == "GrignardReagent.Pooling")
                 {
                     actualProject.Add(reference);
