@@ -81,7 +81,7 @@
 
 ## ⑩ 加分层 ID 域
 
-> 完整流程与规则见 `Assets/LayeredId/README.md`。
+> 完整流程与规则见 `Packages/com.grignardreagent.layeredid/README.md`。
 
 1. 在目标子系统新增 ID 值类型:`[Serializable] struct XxxId : ILayeredId`,序列化字段必须叫 `path`。
 2. 新增目录类:`[LayeredIdCatalog] public sealed class XxxCatalog : LayeredIdCatalog`,只放 `public const string`。

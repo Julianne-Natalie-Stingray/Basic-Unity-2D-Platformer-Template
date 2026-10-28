@@ -35,8 +35,8 @@ Editor  → { Infra, Core, Game, UI, GrignardReagent.LayeredId, GrignardReagent.
 | `Basic2DPlatformer.Level`     | `Assets/Level/Scripts`     | 环境门面、关卡内逻辑、通关与失败     |
 | `Basic2DPlatformer.UI`        | `Assets/UI/Scripts`        | 面板、HUD、点击层与热键        |
 | `Basic2DPlatformer.Editor`    | `Assets/Editor`            | 编辑器工具与校验              |
-| `GrignardReagent.LayeredId`   | `Assets/LayeredId/Runtime` | 分层标识与目录基类;无 UnityEngine 依赖 |
-| `GrignardReagent.LayeredId.Editor` | `Assets/LayeredId/Editor` | 分层抽屉与目录校验窗口(Editor 限定) |
+| `GrignardReagent.LayeredId`   | `Packages/com.grignardreagent.layeredid/Runtime` | 分层标识与目录基类;无 UnityEngine 依赖 |
+| `GrignardReagent.LayeredId.Editor` | `Packages/com.grignardreagent.layeredid/Editor` | 分层抽屉与目录校验窗口(Editor 限定) |
 
 ## 2. 子系统
 
@@ -50,7 +50,7 @@ Editor  → { Infra, Core, Game, UI, GrignardReagent.LayeredId, GrignardReagent.
 | Player    | `Assets/Player/Scripts`    | `PlayerController`(输入→Motor)、`PlayerInteraction`、`PlayerAnimationAudio`、`PlayerDeath`(实现 `IKillable`,广播 `PlayerDied`)           |
 | Level     | `Assets/Level/Scripts`     | `EnvironmentFacade`、通关条件(`ILevelGoal`/`LevelGoalAndOperator`/`LevelGoalOrOperator`/`LevelManager`)、失败通道、终点、危险区                       |
 | UI        | `Assets/UI/Scripts`        | `UiPanel`、按钮组件、`SettingsScreen`、`NextLevelScreen`、`DeathScreen`、`SelectableAudio`、`UiPointer`、`UiClickAudio`、`UiHotkeys` |
-| LayeredId | `Assets/LayeredId`         | `ILayeredId`、`LayeredIdCatalog`、`[LayeredIdCatalog]`、`LayeredIdDrawer`、目录校验窗口(可整体抽包)                                             |
+| LayeredId | `Packages/com.grignardreagent.layeredid` | `ILayeredId`、`LayeredIdCatalog`、`[LayeredIdCatalog]`、`LayeredIdDrawer`、目录校验窗口(内嵌 UPM 包)                                             |
 | Editor    | `Assets/Editor`            | 项目工具窗口、自定义 Inspector、`AudioIdDrawer`、`AudioManagerConfigsEditor`                                                                    |
 
 各子系统细节见 [Subsystems/](Subsystems/)。

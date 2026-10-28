@@ -61,12 +61,13 @@ Assets/
   Player/     Scripts/ · Prefabs/ · Physics/
   Level/      Scripts/ · SO/
   UI/         Scripts/ · Prefabs/
-  LayeredId/  Runtime/ · Editor/ · Tests/
   Editor/     Basic2DPlatformer.Editor.asmdef · Scripts/
   Infra/      Basic2DPlatformer.Infra.asmdef · InputSystem/
   Scene/      Samples/   (测试场景放 Debug/)
   Visuals/    (贴图)
   Sounds/     Clips/ · Mixers/ · SO/
+Packages/
+  com.grignardreagent.layeredid/  Runtime/ · Editor/ · Tests/
 ```
 
 ---
@@ -93,8 +94,8 @@ Editor  → { Infra, Core, Game, UI, GrignardReagent.LayeredId, GrignardReagent.
 | `Basic2DPlatformer.Game` | `Assets/Game/Scripts` | Contracts；GameLog |
 | `Basic2DPlatformer.Contracts` | `Assets/Contracts/Scripts` | 无项目内引用 |
 | `GrignardReagent.Pooling` | UPM 包 | 无项目内引用 |
-| `GrignardReagent.LayeredId` | `Assets/LayeredId/Runtime` | 无项目内引用，且 `noEngineReferences` |
-| `GrignardReagent.LayeredId.Editor` | `Assets/LayeredId/Editor` | LayeredId、UnityEditor |
+| `GrignardReagent.LayeredId` | `Packages/com.grignardreagent.layeredid/Runtime` | 无项目内引用，且 `noEngineReferences` |
+| `GrignardReagent.LayeredId.Editor` | `Packages/com.grignardreagent.layeredid/Editor` | LayeredId、UnityEditor |
 | `Basic2DPlatformer.Character` | `Assets/Character/Scripts` | 无项目内引用 |
 | `Basic2DPlatformer.Player` | `Assets/Player/Scripts` | Core、Character、Contracts |
 | `Basic2DPlatformer.Level` | `Assets/Level/Scripts` | Game、Contracts |

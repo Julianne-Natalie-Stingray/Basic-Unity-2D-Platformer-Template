@@ -309,13 +309,16 @@ public class ProjectToolWindow : EditorWindow
         };
 
         Dictionary<string, string[]> actual = new();
-        foreach (string path in Directory.GetFiles("Assets", "*.asmdef", SearchOption.AllDirectories))
+        foreach (string root in new[] { "Assets", "Packages" })
         {
-            AsmdefData data = JsonUtility.FromJson<AsmdefData>(File.ReadAllText(path));
-            if (data == null || string.IsNullOrEmpty(data.name))
-                continue;
+            foreach (string path in Directory.GetFiles(root, "*.asmdef", SearchOption.AllDirectories))
+            {
+                AsmdefData data = JsonUtility.FromJson<AsmdefData>(File.ReadAllText(path));
+                if (data == null || string.IsNullOrEmpty(data.name))
+                    continue;
 
-            actual[data.name] = data.references ?? new string[0];
+                actual[data.name] = data.references ?? new string[0];
+            }
         }
 
         int problems = 0;

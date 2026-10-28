@@ -2,7 +2,7 @@
 
 分层标识的通用底座：ID 值类型 + 目录类 + Inspector 抽屉 + 校验窗口。
 
-当前以源码形式位于 `Assets/LayeredId`，稳定后整体抽成 UPM 包 `com.grignardreagent.layeredid`。程序集名从第一天起就是 `GrignardReagent.LayeredId` / `GrignardReagent.LayeredId.Editor`，抽包时引用方无需改动。
+当前以内嵌包形式位于 `Packages/com.grignardreagent.layeredid`，版本 `0.1.0`。程序集名是 `GrignardReagent.LayeredId` / `GrignardReagent.LayeredId.Editor`，将来发布到远端时引用方无需改动。
 
 ## 结构
 
@@ -12,7 +12,7 @@ Editor/    LayeredIdDrawer、LayeredIdCatalogWindow
 Tests/     EditMode：排序、Ordinal、空路径、重复、空目录
 ```
 
-运行时程序集 **不引用 UnityEngine**；`autoReferenced = false`，使用方必须显式引用。
+运行时程序集 **不引用 UnityEngine**，且 `autoReferenced = true`：项目内程序集可直接使用，无需显式引用。`Editor` 程序集同样 `autoReferenced = true`。
 
 ## 一个域需要三个文件
 
@@ -57,7 +57,7 @@ internal sealed class QuestIdDrawer : LayeredIdDrawer
 }
 ```
 
-asmdef：ID 所在程序集引用 `GrignardReagent.LayeredId`；抽屉所在编辑器程序集引用 `GrignardReagent.LayeredId.Editor`。
+asmdef：运行时已 `autoReferenced`，ID 所在程序集无需显式引用；抽屉所在编辑器程序集需要引用 `GrignardReagent.LayeredId.Editor`（模板的 `Basic2DPlatformer.Editor` 已引用）。
 
 ## 从新增到使用
 
@@ -86,11 +86,13 @@ asmdef：ID 所在程序集引用 `GrignardReagent.LayeredId`；抽屉所在编�
 
 ## 测试
 
-`Assets/LayeredId/Tests/EditMode` 随包移动；在 Test Runner 里筛选 `GrignardReagent.LayeredId.Tests`。
+`Tests/EditMode` 随包；`Packages/manifest.json` 的 `testables` 已列出本包。在 Test Runner 里筛选 `GrignardReagent.LayeredId.Tests`。
 
-## 抽包步骤
+## 发布到远端
 
-1. 把 `Assets/LayeredId/{Runtime,Editor,Tests}` 整体搬到新仓库根。
-2. 加 `package.json`：`com.grignardreagent.layeredid`，版本 `0.1.0`。
-3. 打 tag `v0.1.0`，模板 `manifest.json` 改为 git URL + tag。
-4. 删除 `Assets/LayeredId`；程序集名不变，引用自动解析。
+当前是 repo 内嵌包，`git push` 由维护者决定。正式发布时：
+
+1. 新建远端仓库，把 `Runtime/`、`Editor/`、`Tests/`、`package.json`、`README.md`、`CHANGELOG.md` 放到仓库根。
+2. 打 tag `v0.1.0`。
+3. 使用方的 `Packages/manifest.json` 改为 git URL + tag，并删除 `Packages/com.grignardreagent.layeredid`。
+4. 程序集名不变，引用自动解析；若使用方把包加入 `testables`，测试继续可用。

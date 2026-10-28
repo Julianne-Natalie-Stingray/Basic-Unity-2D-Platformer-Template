@@ -31,6 +31,14 @@
       "dependencies": {},
       "hash": "030ff896fd4599145c28f0a8db20cfb6384fa7b2"
     },
+    "com.grignardreagent.layeredid": {
+      "version": "file:com.grignardreagent.layeredid",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.33"
+      }
+    },
     "com.grignardreagent.pooling": {
       "version": "https://github.com/Julianne-Natalie-Stingray/UnityEngine-Custom-Pooling.git",
       "depth": 0,

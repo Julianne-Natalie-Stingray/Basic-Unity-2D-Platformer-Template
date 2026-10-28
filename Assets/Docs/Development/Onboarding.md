@@ -6,7 +6,7 @@
 ## 1. 工程结构
 
 - 子系统：`Core` / `Game` / `Contracts` / `Character` / `Player` / `Level` / `UI` / `Editor` / `Infra`。
-- 通用基础包：`Assets/LayeredId`（`Runtime` / `Editor` / `Tests`），程序集名 `GrignardReagent.LayeredId`。
+- 通用基础包：`Packages/com.grignardreagent.layeredid`（`Runtime` / `Editor` / `Tests`），程序集名 `GrignardReagent.LayeredId`。
 - 代码在 `Assets/<Subsystem>/Scripts/`；资源随子系统（`SO/` / `Prefabs/` / `Physics/`）或按格式（`Scene/` / `Visuals/` / `Sounds/`）。
 - 文档：`Assets/Docs/Development/` 放代码相关文档，`Assets/Docs/Manual/` 放操作文档。
 - 子系统文档：`Assets/Docs/Development/Subsystems/<Name>.md`。

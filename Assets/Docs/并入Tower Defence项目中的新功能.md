@@ -144,15 +144,15 @@ tags:
 ### 用户回复
 
 1. A. 需要你讲清使用这个包从新建Id到使用的全流程
-  
+
 2. 采纳
-  
+
 3. 采纳
-  
+
 4. 加
-  
+
 5. A
-  
+
 6. 为什么需要一个专门的`TimeScaleManager`? 帮我理清
 
 # 5    Entry 4
@@ -190,15 +190,15 @@ tags:
 ### 用户回复
 
 - B
-  
+
 - A
-  
+
 - A
-  
+
 - B
-  
+
 - 保留
-  
+
 - 按此顺序
 
 # 6    Entry 5
@@ -228,15 +228,15 @@ tags:
 ### 用户回复
 
 - A. 保留, `GameState`语义不只有是否冻结
-  
+
 - A
-  
+
 - 全部采纳
-  
+
 - A
-  
+
 - A
-  
+
 - B 
 
 # 7    Phase 1 验收
@@ -245,18 +245,18 @@ tags:
 
 ### 交付物
 
-| 文件 | 说明 |
-| --- | --- |
-| `Assets/LayeredId/Runtime/GrignardReagent.LayeredId.asmdef` | `autoReferenced = false`;`noEngineReferences = true`(运行时不依赖 UnityEngine) |
-| `Assets/LayeredId/Runtime/ILayeredId.cs` | `Path` / `IsValid` 值契约 |
-| `Assets/LayeredId/Runtime/LayeredIdCatalog.cs` | 反射 `DeclaredOnly` 的 `public const string`,生成排序路径、`HashSet` 查找、成员映射与校验问题;按 `Type` 缓存 |
-| `Assets/LayeredId/Runtime/LayeredIdCatalogAttribute.cs` | 目录发现标签 |
-| `Assets/LayeredId/Runtime/LayeredIdMember.cs` | 成员名 ↔ 路径 |
-| `Assets/LayeredId/Runtime/LayeredIdIssue.cs` | 校验问题载荷 |
-| `Assets/LayeredId/Editor/GrignardReagent.LayeredId.Editor.asmdef` | Editor 平台限定,引用 Runtime |
-| `Assets/LayeredId/Editor/LayeredIdDrawer.cs` | 读 `path` 子字段;`AdvancedDropdown` 按 `/` 分层;不在目录时画红底线 |
-| `Assets/LayeredId/Editor/LayeredIdCatalogEditor.cs` | 按 `/` 缩进展示成员;空路径/重复路径/空目录报 Error;未打标告警 |
-| `Assets/LayeredId/Tests/EditMode/LayeredIdCatalogTests.cs` | 5 条:排序、Ordinal 大小写、空路径、重复路径、空目录 |
+| 文件                                                                | 说明                                                                                  |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `Assets/LayeredId/Runtime/GrignardReagent.LayeredId.asmdef`       | `autoReferenced = false`;`noEngineReferences = true`(运行时不依赖 UnityEngine)            |
+| `Assets/LayeredId/Runtime/ILayeredId.cs`                          | `Path` / `IsValid` 值契约                                                              |
+| `Assets/LayeredId/Runtime/LayeredIdCatalog.cs`                    | 反射 `DeclaredOnly` 的 `public const string`,生成排序路径、`HashSet` 查找、成员映射与校验问题;按 `Type` 缓存 |
+| `Assets/LayeredId/Runtime/LayeredIdCatalogAttribute.cs`           | 目录发现标签                                                                              |
+| `Assets/LayeredId/Runtime/LayeredIdMember.cs`                     | 成员名 ↔ 路径                                                                            |
+| `Assets/LayeredId/Runtime/LayeredIdIssue.cs`                      | 校验问题载荷                                                                              |
+| `Assets/LayeredId/Editor/GrignardReagent.LayeredId.Editor.asmdef` | Editor 平台限定,引用 Runtime                                                              |
+| `Assets/LayeredId/Editor/LayeredIdDrawer.cs`                      | 读 `path` 子字段;`AdvancedDropdown` 按 `/` 分层;不在目录时画红底线                                  |
+| `Assets/LayeredId/Editor/LayeredIdCatalogEditor.cs`               | 按 `/` 缩进展示成员;空路径/重复路径/空目录报 Error;未打标告警                                              |
+| `Assets/LayeredId/Tests/EditMode/LayeredIdCatalogTests.cs`        | 5 条:排序、Ordinal 大小写、空路径、重复路径、空目录                                                     |
 
 ### 验收
 
@@ -291,15 +291,15 @@ tags:
 
 ### 数据迁移(84 处 + 3 个资产)
 
-| 文件 | 字段数 |
-| --- | --- |
-| `MainMenu.unity` | 20(`downSfx` 2 处 → `Sfx/UI/MouseClick`) |
-| `SampleLevel.unity` | 30 |
-| `Final.unity` | 5 |
-| `SettingsPanel.prefab` | 25 |
-| `Player.prefab` | 3 |
-| `Core.prefab` | 1(`debugAudioRequest` → `Ost/Generic`) |
-| `Sounds/SO/*.asset` | 3(`audioId` → 路径) |
+| 文件                     | 字段数                                     |
+| ---------------------- | --------------------------------------- |
+| `MainMenu.unity`       | 20(`downSfx` 2 处 → `Sfx/UI/MouseClick`) |
+| `SampleLevel.unity`    | 30                                      |
+| `Final.unity`          | 5                                       |
+| `SettingsPanel.prefab` | 25                                      |
+| `Player.prefab`        | 3                                       |
+| `Core.prefab`          | 1(`debugAudioRequest` → `Ost/Generic`)  |
+| `Sounds/SO/*.asset`    | 3(`audioId` → 路径)                       |
 
 ### 验收
 
@@ -326,12 +326,12 @@ tags:
 
 ### 交付物
 
-| 文件 | 说明 |
-| --- | --- |
-| `Assets/UI/Prefabs/ClickScreen.prefab` | 全屏拉伸的透明 `Image`(`raycastTarget=1`、`maskable=0`、alpha 0) + `PassThroughUi`;**不含**任何音效组件 |
-| `Assets/Core/Scripts/Visuals/PassThroughUi.cs` | 空标记,供世界输入判定忽略该层 |
-| `Assets/UI/Scripts/UiPointer.cs` | `IsPointerOverBlockingUi()`:射线命中不在 `PassThroughUi` 之下即视为阻挡 |
-| `Assets/UI/Scripts/ScriptComponents/UiClickAudio.cs` | 左键 `IPointerDown` → 序列化 cue;`AllowWhileFrozen + SurviveFreeze` |
+| 文件                                                   | 说明                                                                                     |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `Assets/UI/Prefabs/ClickScreen.prefab`               | 全屏拉伸的透明 `Image`(`raycastTarget=1`、`maskable=0`、alpha 0) + `PassThroughUi`;**不含**任何音效组件 |
+| `Assets/Core/Scripts/Visuals/PassThroughUi.cs`       | 空标记,供世界输入判定忽略该层                                                                        |
+| `Assets/UI/Scripts/UiPointer.cs`                     | `IsPointerOverBlockingUi()`:射线命中不在 `PassThroughUi` 之下即视为阻挡                             |
+| `Assets/UI/Scripts/ScriptComponents/UiClickAudio.cs` | 左键 `IPointerDown` → 序列化 cue;`AllowWhileFrozen + SurviveFreeze`                         |
 
 ### 接线方式(不写进场景)
 
@@ -514,8 +514,38 @@ tags:
 ### 复验
 
 - 反射调用 `ValidateArchitecture` → `architectureProblems=0`。
+
 - 完整 `Validate` → 控制台 `[Basic2DPlatformer] 校验通过, 无问题.`
-   
-   ### 回复
-   
-   
+
+# 15    抽包
+
+> 提交:见本条记录对应的 `refactor(package)`。
+
+### 决策
+
+- 抽成 **repo 内嵌包** `Packages/com.grignardreagent.layeredid`,版本 `0.1.0`。
+- **不推送远端**;`package.json` 已就绪,将来发布时再建远端仓库并打 tag。
+- `autoReferenced = true`(Runtime + Editor);测试程序集保持 `false`(测试惯例)。
+- `Packages/manifest.json`:`dependencies` 增加 `com.grignardreagent.layeredid: 0.1.0`,`testables` 增加包名。
+
+### 改动
+
+- `Assets/LayeredId/**` 整体移动到 `Packages/com.grignardreagent.layeredid/**`,保留文件 GUID 与 git 重命名历史;删除 `Assets/LayeredId.meta`。
+- 新增 `package.json`(含 `com.unity.test-framework` 依赖);`packages-lock.json` 记录 `source: embedded`。
+- `ProjectToolWindow` 的 asmdef 扫描从 `Assets` 扩展到 `Assets` + `Packages`,否则包内程序集会全部报“未登记”。
+- 文档路径同步:`ARCHITECTURE` / `Design` / `EXTENDING` / `Onboarding` / `Packages` / `Verification` 与包内 `README` / `CHANGELOG`。
+
+### 验收
+
+- `PackageInfo.GetAllRegisteredPackages()` → `com.grignardreagent.layeredid v0.1.0 source=Embedded`。
+- 编译无 error / warning;EditMode **26/26**(包内 5 条测试随 `testables` 一起跑)。
+- 完整 `Validate` → `[Basic2DPlatformer] 校验通过, 无问题.`
+- 未执行任何 `git push`。
+  
+  ### 回复
+  
+  @grill-me 意识到`InputManager`本身必要性不大, 不如使用Unity自带的各种component. 准备换回内置管线, 请你拷问这一决定. `InputManager`有带来任何收益吗
+  
+  1. A.
+  
+  2. 

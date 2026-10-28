@@ -13,7 +13,7 @@
 | 预制体  | `Player/Prefabs/Player.prefab`、`Core/Prefabs/Camera.prefab`、`UI/Prefabs/ClickScreen.prefab`（可选） |
 | 场景   | `Scene/Samples/MainMenu.unity`、`SampleLevel.unity`、`Final.unity` |
 | 层级   | `Ground`、`Player`                                                |
-| 包    | `Assets/LayeredId`（Runtime / Editor / Tests）                      |
+| 包    | `Packages/com.grignardreagent.layeredid`（Runtime / Editor / Tests）                      |
 
 `SampleLevel` 组成：
 
